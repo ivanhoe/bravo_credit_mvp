@@ -1,11 +1,14 @@
 import Config
 
+database_url = System.get_env("DATABASE_URL")
+
 # Configure your database
 config :bravo_credit, BravoCredit.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "bravo_credit_dev",
+  url: database_url,
+  username: if(database_url, do: nil, else: "postgres"),
+  password: if(database_url, do: nil, else: "postgres"),
+  hostname: if(database_url, do: nil, else: "localhost"),
+  database: if(database_url, do: nil, else: "bravo_credit_dev"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

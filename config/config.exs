@@ -11,6 +11,27 @@ config :bravo_credit,
   ecto_repos: [BravoCredit.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
+config :bravo_credit, :country_config_path, Path.expand("countries", __DIR__)
+
+config :bravo_credit, BravoCredit.Cache,
+  name: :bravo_credit_cache,
+  default_ttl_ms: :timer.seconds(60)
+
+config :bravo_credit, Oban,
+  repo: BravoCredit.Repo,
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}
+  ],
+  queues: [
+    default: 10,
+    providers: 5,
+    risk: 5,
+    webhooks: 5,
+    outbox: 5
+  ]
+
+config :cloak_ecto, json_library: Jason
+
 # Configure the endpoint
 config :bravo_credit, BravoCreditWeb.Endpoint,
   url: [host: "localhost"],

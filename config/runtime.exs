@@ -23,6 +23,31 @@ end
 config :bravo_credit, BravoCreditWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+guardian_secret_key =
+  System.get_env("GUARDIAN_SECRET_KEY") ||
+    if config_env() == :prod do
+      raise "environment variable GUARDIAN_SECRET_KEY is missing."
+    else
+      "dev-only-guardian-secret-key-change-me-in-production"
+    end
+
+cloak_key =
+  System.get_env("CLOAK_KEY") ||
+    if config_env() == :prod do
+      raise "environment variable CLOAK_KEY is missing."
+    else
+      "01234567890123456789012345678901"
+    end
+
+config :bravo_credit, BravoCredit.Accounts.Guardian,
+  issuer: "bravo_credit",
+  secret_key: guardian_secret_key
+
+config :bravo_credit, BravoCredit.Vault,
+  ciphers: [
+    default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: cloak_key}
+  ]
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

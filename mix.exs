@@ -27,7 +27,7 @@ defmodule BravoCredit.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, check: :test]
     ]
   end
 
@@ -58,6 +58,12 @@ defmodule BravoCredit.MixProject do
        app: false,
        compile: false,
        depth: 1},
+      {:oban, "~> 2.19"},
+      {:guardian, "~> 2.4"},
+      {:jose, "~> 1.11"},
+      {:cloak_ecto, "~> 1.3"},
+      {:cachex, "~> 4.1"},
+      {:yaml_elixir, "~> 2.11"},
       {:swoosh, "~> 1.16"},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
@@ -65,7 +71,9 @@ defmodule BravoCredit.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:mox, "~> 1.2", only: :test}
     ]
   end
 
@@ -81,6 +89,8 @@ defmodule BravoCredit.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      lint: ["format --check-formatted", "credo --strict"],
+      check: ["lint", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind bravo_credit", "esbuild bravo_credit"],
       "assets.deploy": [
@@ -88,7 +98,7 @@ defmodule BravoCredit.MixProject do
         "esbuild bravo_credit --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "check"]
     ]
   end
 end

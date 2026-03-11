@@ -10,6 +10,8 @@ defmodule BravoCredit.Application do
     children = [
       BravoCreditWeb.Telemetry,
       BravoCredit.Repo,
+      {Cachex, name: BravoCredit.Cache.cache_name()},
+      {Oban, Application.fetch_env!(:bravo_credit, Oban)},
       {DNSCluster, query: Application.get_env(:bravo_credit, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: BravoCredit.PubSub},
       # Start a worker by calling: BravoCredit.Worker.start_link(arg)
