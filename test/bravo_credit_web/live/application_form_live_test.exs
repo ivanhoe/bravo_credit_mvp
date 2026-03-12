@@ -14,8 +14,7 @@ defmodule BravoCreditWeb.ApplicationFormLiveTest do
       "full_name" => "Maria Applicant",
       "document_id" => unique_co_document_id(),
       "amount" => "3500000.00",
-      "monthly_income" => "1800000.00",
-      "channel" => "operations-live-test"
+      "monthly_income" => "1800000.00"
     }
 
     render_submit(form(view, "#application-form", application: params))
@@ -24,6 +23,24 @@ defmodule BravoCreditWeb.ApplicationFormLiveTest do
 
     assert_redirect(view, ~p"/applications/#{application.id}")
     assert application.country_code == "CO"
+  end
+
+  test "validates required fields with schema before creating", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/applications/new")
+
+    invalid_params = %{
+      "country_code" => "MX",
+      "full_name" => "",
+      "document_id" => "",
+      "amount" => "",
+      "monthly_income" => ""
+    }
+
+    html = render_submit(form(view, "#application-form", application: invalid_params))
+
+    assert html =~ "no puede estar vacío"
+    assert has_element?(view, "#application-form")
+    assert Repo.aggregate(Application, :count, :id) == 0
   end
 
   defp unique_co_document_id do

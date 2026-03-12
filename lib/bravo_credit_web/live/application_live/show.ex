@@ -19,7 +19,7 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
 
     {:ok,
      socket
-     |> assign(:page_title, "Application Detail")
+     |> assign(:page_title, "Detalle de Solicitud")
      |> assign(:application_id, application_id)
      |> load_detail(application_id)}
   end
@@ -37,11 +37,11 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
       {:ok, _webhook_event} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Webhook accepted and enqueued for processing.")
+         |> put_flash(:info, "Webhook recibido y encolado para su procesamiento.")
          |> load_detail(socket.assigns.application_id)}
 
       {:error, %Error{} = error} ->
-        {:noreply, put_flash(socket, :error, "#{error.code}: #{error.message}")}
+        {:noreply, put_flash(socket, :error, user_error_message(error))}
     end
   end
 
@@ -55,11 +55,11 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
       {:ok, _application} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Manual transition persisted.")
+         |> put_flash(:info, "Cambio de estado manual guardado.")
          |> load_detail(socket.assigns.application_id)}
 
       {:error, %Error{} = error} ->
-        {:noreply, put_flash(socket, :error, "#{error.code}: #{error.message}")}
+        {:noreply, put_flash(socket, :error, user_error_message(error))}
     end
   end
 
@@ -71,24 +71,35 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <.header>
-        Detalle de Solicitud
-        <:subtitle>
-          Revisa la información del cliente, las validaciones automáticas y la decisión de riesgo.
-        </:subtitle>
-        <:actions>
-          <div class="flex gap-2">
-            <.button navigate={~p"/operations"} class="btn btn-ghost">Volver</.button>
-            <.button navigate={~p"/applications/new"}>Nueva Solicitud</.button>
+    <div class="bravo-shell space-y-6">
+      <section class="bravo-surface bravo-hero p-6 sm:p-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
+              Detalle de Solicitud
+            </p>
+            <h1 class="mt-2 text-2xl font-semibold sm:text-3xl">Detalle de Solicitud</h1>
+            <p class="mt-2 max-w-2xl text-sm text-white/85 sm:text-base">
+              Revisa la información del cliente, las validaciones automáticas y la decisión de
+              riesgo.
+            </p>
           </div>
-        </:actions>
-      </.header>
+          <div class="flex gap-2">
+            <.button
+              navigate={~p"/operations"}
+              class="btn btn-outline border-white/40 text-white hover:bg-white/10"
+            >
+              Volver
+            </.button>
+            <.button navigate={~p"/applications/new"} class="btn btn-accent">Nueva Solicitud</.button>
+          </div>
+        </div>
+      </section>
 
       <%= if @detail do %>
         <div class="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
           <div class="space-y-6">
-            <section class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
+            <section class="bravo-grid-card">
               <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div class="text-sm text-base-content/60">{@detail.application.id}</div>
@@ -103,7 +114,9 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
                       Riesgo: {status_translation(@detail.application.risk_status)}
                     </span>
                   </div>
-                  <p class="mt-3 text-sm text-base-content/70">{@detail.stage.detail}</p>
+                  <p class="mt-3 text-sm text-base-content/70">
+                    {stage_detail_translation(@detail.stage.detail)}
+                  </p>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
@@ -121,7 +134,7 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
                   <%= for target_state <- @detail.available_transitions do %>
                     <button
                       type="button"
-                      class="btn btn-sm"
+                      class="btn btn-sm btn-secondary text-white"
                       data-state-target={target_state}
                       phx-click="transition"
                       phx-value-state={target_state}
@@ -133,7 +146,7 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
               </div>
 
               <div class="mt-6 grid gap-6 lg:grid-cols-2">
-                <div>
+                <div class="rounded-xl border border-base-300/80 bg-base-200/25 p-2">
                   <.list>
                     <:item title="País">{@detail.application.country_code}</:item>
                     <:item title="Monto Solicitado">{@detail.application.amount}</:item>
@@ -149,18 +162,18 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
 
                 <div class="space-y-4">
                   <div>
-                    <div class="mb-2 text-sm font-semibold">Metadata Original</div>
-                    <pre class="overflow-x-auto rounded-box bg-base-200 p-3 text-xs">{pretty_json(@detail.application.metadata)}</pre>
+                    <div class="mb-2 text-sm font-semibold">Metadatos Originales</div>
+                    <pre class="overflow-x-auto rounded-xl bg-base-200 p-3 text-xs">{pretty_json(@detail.application.metadata)}</pre>
                   </div>
                   <div>
                     <div class="mb-2 text-sm font-semibold">Datos Bancarios (Enriquecidos)</div>
-                    <pre class="overflow-x-auto rounded-box bg-base-200 p-3 text-xs">{pretty_json(@detail.application.banking_info)}</pre>
+                    <pre class="overflow-x-auto rounded-xl bg-base-200 p-3 text-xs">{pretty_json(@detail.application.banking_info)}</pre>
                   </div>
                 </div>
               </div>
             </section>
 
-            <section class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
+            <section class="bravo-grid-card">
               <.header>
                 Historia de la Solicitud
                 <:subtitle>
@@ -177,10 +190,10 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
           </div>
 
           <div class="space-y-6">
-            <details class="group rounded-box border border-base-300 bg-base-100 p-6 shadow-sm open:border-primary">
-              <summary class="cursor-pointer font-semibold text-lg flex items-center justify-between">
-                <span>Diagnósticos Técnicos (Debug)</span>
-                <span class="group-open:rotate-180 transition-transform">▼</span>
+            <details class="group bravo-grid-card open:border-secondary">
+              <summary class="flex cursor-pointer items-center justify-between text-lg font-semibold">
+                <span>Diagnósticos Técnicos (Depuración)</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
               </summary>
               <div class="mt-4 space-y-6">
                 <section>
@@ -198,9 +211,9 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
 
                 <section>
                   <.header>
-                    Event Outbox
+                    Bandeja de Salida de Eventos
                     <:subtitle>
-                      Patrón de outbox transaccional para evitar fallos de conectividad.
+                      Patrón de bandeja de salida transaccional para evitar fallos de conectividad.
                     </:subtitle>
                   </.header>
                   <.table id="outbox-events" rows={@detail.outbox_events}>
@@ -212,8 +225,8 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
                 <section>
                   <.header>Cola de Trabajo (Oban)</.header>
                   <.table id="jobs" rows={@detail.jobs}>
-                    <:col :let={job} label="Fondo">{short_worker(job.worker)}</:col>
-                    <:col :let={job} label="Estado">{job.state}</:col>
+                    <:col :let={job} label="Proceso">{short_worker(job.worker)}</:col>
+                    <:col :let={job} label="Estado">{job_state_translation(job.state)}</:col>
                   </.table>
                 </section>
               </div>
@@ -221,7 +234,7 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
           </div>
         </div>
       <% else %>
-        <div class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
+        <div class="bravo-grid-card">
           <p>La solicitud no fue encontrada.</p>
         </div>
       <% end %>
@@ -248,13 +261,14 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
   defp webhook_button_label("provider.application_approved"), do: "Resolución Externa: Aprobó"
   defp webhook_button_label("provider.application_rejected"), do: "Resolución Externa: Declinó"
 
-  defp webhook_reason("provider.manual_review_requested"), do: "provider requested extra checks"
+  defp webhook_reason("provider.manual_review_requested"),
+    do: "el proveedor solicitó validaciones adicionales"
 
   defp webhook_reason("provider.application_approved"),
-    do: "provider marked the application as approved"
+    do: "el proveedor marcó la solicitud como aprobada"
 
   defp webhook_reason("provider.application_rejected"),
-    do: "provider marked the application as rejected"
+    do: "el proveedor marcó la solicitud como rechazada"
 
   defp status_badge(:approved), do: "badge-success"
   defp status_badge(:rejected), do: "badge-error"
@@ -270,6 +284,14 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
   defp status_translation(:rejected), do: "Rechazada"
   defp status_translation(:in_review), do: "En Revisión Manual"
   defp status_translation(:cancelled), do: "Cancelada"
+  defp status_translation(:not_started), do: "No iniciado"
+  defp status_translation(:provider_data_ready), do: "Datos del proveedor listos"
+  defp status_translation(:processing), do: "Procesando"
+  defp status_translation(:manual_review), do: "Revisión manual"
+  defp status_translation(:received), do: "Recibido"
+  defp status_translation(:processed), do: "Procesado"
+  defp status_translation(:failed), do: "Fallido"
+  defp status_translation(:duplicate), do: "Duplicado"
 
   defp status_translation(:low), do: "Bajo"
   defp status_translation(:medium), do: "Medio"
@@ -289,7 +311,33 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
   defp stage_translation("Finalized"), do: "Finalizada"
   defp stage_translation(other), do: other
 
-  defp format_datetime(nil), do: "n/a"
+  defp stage_detail_translation("Application stored and waiting for provider fetch"),
+    do: "Solicitud registrada y en espera de consulta al proveedor."
+
+  defp stage_detail_translation("Provider job is running"),
+    do: "La tarea del proveedor está en ejecución."
+
+  defp stage_detail_translation("Provider data is available and risk evaluation is in progress"),
+    do: "Los datos del proveedor ya están disponibles y el riesgo se está evaluando."
+
+  defp stage_detail_translation("Application completed successfully"),
+    do: "Solicitud finalizada correctamente."
+
+  defp stage_detail_translation("Application was rejected by risk or manual review"),
+    do: "La solicitud fue rechazada por riesgo o por revisión manual."
+
+  defp stage_detail_translation("Waiting for analyst decision or provider callback"),
+    do: "En espera de decisión del analista o de respuesta del proveedor."
+
+  defp stage_detail_translation("Application was cancelled"),
+    do: "La solicitud fue cancelada."
+
+  defp stage_detail_translation("Current status is tracked from the aggregate snapshot"),
+    do: "El estado actual se obtiene desde el agregado persistido."
+
+  defp stage_detail_translation(detail), do: detail
+
+  defp format_datetime(nil), do: "N/D"
 
   defp format_datetime(%DateTime{} = datetime),
     do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M:%S UTC")
@@ -301,5 +349,30 @@ defmodule BravoCreditWeb.ApplicationLive.Show do
     worker
     |> String.split(".")
     |> List.last()
+  end
+
+  defp job_state_translation("available"), do: "Disponible"
+  defp job_state_translation("scheduled"), do: "Programado"
+  defp job_state_translation("executing"), do: "Ejecutando"
+  defp job_state_translation("retryable"), do: "Reintentable"
+  defp job_state_translation("completed"), do: "Completado"
+  defp job_state_translation("discarded"), do: "Descartado"
+  defp job_state_translation("cancelled"), do: "Cancelado"
+  defp job_state_translation(other), do: other
+
+  defp user_error_message(%Error{code: "document.invalid_format"}) do
+    "El documento no coincide con el formato esperado para el país seleccionado."
+  end
+
+  defp user_error_message(%Error{code: "application.duplicate_document"}) do
+    "Este documento ya tiene una solicitud registrada."
+  end
+
+  defp user_error_message(%Error{code: "state.invalid_transition"}) do
+    "No se puede realizar ese cambio de estado desde el estado actual."
+  end
+
+  defp user_error_message(%Error{}) do
+    "Ocurrió un problema al procesar la acción. Inténtalo nuevamente."
   end
 end

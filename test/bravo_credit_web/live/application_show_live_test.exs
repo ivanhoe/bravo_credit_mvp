@@ -12,9 +12,9 @@ defmodule BravoCreditWeb.ApplicationShowLiveTest do
 
     {:ok, view, html} = live(conn, ~p"/applications/#{application.id}")
 
-    assert html =~ "Application Detail"
+    assert html =~ "Detalle de Solicitud"
     assert html =~ application.id
-    assert html =~ "Manual Review"
+    assert html =~ "Revisión Manual"
 
     view
     |> element("[data-state-target='approved']")
@@ -24,7 +24,7 @@ defmodule BravoCreditWeb.ApplicationShowLiveTest do
 
     assert updated_application.status == :approved
     assert updated_application.risk_status == :approved
-    assert render(view) =~ "Application completed successfully"
+    assert render(view) =~ "Solicitud finalizada correctamente."
   end
 
   defp in_review_application_fixture do
