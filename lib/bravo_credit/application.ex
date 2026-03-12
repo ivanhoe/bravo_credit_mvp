@@ -7,6 +7,8 @@ defmodule BravoCredit.Application do
 
   @impl true
   def start(_type, _args) do
+    BravoCredit.Countries.Registry.refresh!()
+
     children = [
       BravoCreditWeb.Telemetry,
       BravoCredit.Repo,

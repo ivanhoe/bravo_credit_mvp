@@ -1,0 +1,24 @@
+country_code: CO
+country_name: Colombia
+currency: COP
+
+document:
+  type: CC
+  validator: cc_basic
+
+rules:
+  - id: min_income
+    kind: min_income
+    evaluation_phase: initial
+    amount: "1500000"
+    message: El ingreso minimo es 1,500,000 COP
+
+  - id: debt_income_ratio
+    kind: max_total_debt_to_income_ratio
+    evaluation_phase: provider
+    threshold: "0.4"
+    message: La deuda total no puede superar 40% del ingreso mensual
+
+provider:
+  adapter: bank_co
+  timeout_ms: 8000

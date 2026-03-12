@@ -1,0 +1,21 @@
+country_code: MX
+country_name: Mexico
+currency: MXN
+
+document:
+  type: CURP
+  validator: curp
+
+rules:
+  - id: amount_income_ratio
+    kind: max_amount_to_income_ratio
+    evaluation_phase: initial
+    threshold: "4.0"
+    message: El monto solicitado no puede superar 4x el ingreso mensual
+
+provider:
+  adapter: bank_mx
+  timeout_ms: 5000
+
+review:
+  high_amount_threshold: "200000"
