@@ -28,6 +28,7 @@ defmodule BravoCreditWeb.Router do
     pipe_through :api
 
     post "/applications", ApplicationController, :create
+    post "/webhooks/provider", WebhookController, :provider
   end
 
   scope "/api", BravoCreditWeb do

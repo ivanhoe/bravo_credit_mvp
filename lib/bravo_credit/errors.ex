@@ -157,6 +157,26 @@ defmodule BravoCredit.Errors do
     )
   end
 
+  @spec unsupported_webhook_event(String.t() | nil) :: Error.t()
+  def unsupported_webhook_event(event_type \\ nil) do
+    new("webhook.unsupported_event", "Webhook event type is not supported",
+      http_status: 422,
+      source: :webhook,
+      retryable?: false,
+      details: maybe_put(%{}, :event_type, event_type)
+    )
+  end
+
+  @spec webhook_event_not_found(Ecto.UUID.t() | nil) :: Error.t()
+  def webhook_event_not_found(webhook_event_id \\ nil) do
+    new("webhook.not_found", "Webhook event was not found",
+      http_status: 404,
+      source: :webhook,
+      retryable?: false,
+      details: maybe_put(%{}, :webhook_event_id, webhook_event_id)
+    )
+  end
+
   @spec outbox_dispatch_failed(map()) :: Error.t()
   def outbox_dispatch_failed(details \\ %{}) do
     new("outbox.dispatch_failed", "Outbox dispatch failed",
