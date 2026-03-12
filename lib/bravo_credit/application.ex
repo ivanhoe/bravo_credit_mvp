@@ -7,13 +7,12 @@ defmodule BravoCredit.Application do
 
   @impl true
   def start(_type, _args) do
-    BravoCredit.Countries.Registry.refresh!()
-
     children = [
       BravoCreditWeb.Telemetry,
       BravoCredit.Vault,
       BravoCredit.Repo,
-      {Cachex, name: BravoCredit.Cache.cache_name()},
+      BravoCredit.Cache,
+      {Task, fn -> BravoCredit.Countries.Registry.refresh!() end},
       {Oban, Application.fetch_env!(:bravo_credit, Oban)},
       {DNSCluster, query: Application.get_env(:bravo_credit, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: BravoCredit.PubSub},

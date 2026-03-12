@@ -62,7 +62,6 @@ defmodule BravoCredit.MixProject do
       {:guardian, "~> 2.4"},
       {:jose, "~> 1.11"},
       {:cloak_ecto, "~> 1.3"},
-      {:cachex, "~> 4.1"},
       {:yaml_elixir, "~> 2.11"},
       {:swoosh, "~> 1.16"},
       {:req, "~> 0.5"},
@@ -85,7 +84,7 @@ defmodule BravoCredit.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
+      setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],

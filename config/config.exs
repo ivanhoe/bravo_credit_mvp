@@ -13,10 +13,6 @@ config :bravo_credit,
 
 config :bravo_credit, :country_config_path, Path.expand("countries", __DIR__)
 
-config :bravo_credit, BravoCredit.Cache,
-  name: :bravo_credit_cache,
-  default_ttl_ms: :timer.seconds(60)
-
 config :bravo_credit, Oban,
   repo: BravoCredit.Repo,
   plugins: [

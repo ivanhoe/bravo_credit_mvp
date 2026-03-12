@@ -6,7 +6,8 @@ defmodule BravoCredit.Countries.Registry do
   alias BravoCredit.Countries.Loader
   alias BravoCredit.Errors
 
-  @registry_key {__MODULE__, :configs}
+  @registry_key "country_configs"
+
   @default_validator_registry %{
     "curp" => BravoCredit.Documents.CURP,
     "cc_basic" => BravoCredit.Documents.CC
@@ -19,15 +20,15 @@ defmodule BravoCredit.Countries.Registry do
   @spec refresh!() :: %{String.t() => BravoCredit.Countries.CountryConfig.t()}
   def refresh! do
     configs = Loader.load!(path(), validator_registry(), provider_registry())
-    :persistent_term.put(@registry_key, configs)
+    BravoCredit.Cache.put(@registry_key, configs)
     configs
   end
 
   @spec all() :: %{String.t() => BravoCredit.Countries.CountryConfig.t()}
   def all do
-    case :persistent_term.get(@registry_key, nil) do
-      nil -> refresh!()
-      configs -> configs
+    case BravoCredit.Cache.get(@registry_key) do
+      {:ok, configs} -> configs
+      :error -> refresh!()
     end
   end
 
