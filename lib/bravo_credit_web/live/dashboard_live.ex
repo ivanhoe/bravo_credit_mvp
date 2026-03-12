@@ -35,38 +35,38 @@ defmodule BravoCreditWeb.DashboardLive do
     ~H"""
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <.header>
-        Operations Console
+        Control de Solicitudes (Backoffice)
         <:subtitle>
-          Watch applications move through provider, risk, webhook, and outbox flows in near real time.
+          Monitorea y evalúa las solicitudes de crédito ingresadas en la plataforma en tiempo real.
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/applications/new"}>Create Application</.button>
+          <.button navigate={~p"/applications/new"} variant="primary">Crear Nueva Solicitud</.button>
         </:actions>
       </.header>
 
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <.metric_card
-          label="Pending"
+          label="Pendientes"
           value={status_count(@snapshot.status_counts, :pending)}
           tone="border-info"
         />
         <.metric_card
-          label="Evaluating"
+          label="Evaluando"
           value={status_count(@snapshot.status_counts, :evaluating)}
           tone="border-warning"
         />
         <.metric_card
-          label="Approved"
+          label="Aprobadas"
           value={status_count(@snapshot.status_counts, :approved)}
           tone="border-success"
         />
         <.metric_card
-          label="In Review"
+          label="En Revisión"
           value={status_count(@snapshot.status_counts, :in_review)}
           tone="border-accent"
         />
         <.metric_card
-          label="Rejected"
+          label="Rechazadas"
           value={status_count(@snapshot.status_counts, :rejected)}
           tone="border-error"
         />
@@ -78,18 +78,18 @@ defmodule BravoCreditWeb.DashboardLive do
             <.input
               field={@filters_form[:country]}
               type="select"
-              label="Country"
+              label="Filtro País"
               options={country_options()}
             />
             <.input
               field={@filters_form[:status]}
               type="select"
-              label="Status"
+              label="Filtro Estado"
               options={status_options()}
             />
             <div class="fieldset mb-2">
-              <span class="label mb-1">Last refresh</span>
-              <div class="input flex items-center">
+              <span class="label mb-1">Última actualización (Live)</span>
+              <div class="input flex items-center bg-base-200">
                 {format_datetime(@snapshot.generated_at)}
               </div>
             </div>
@@ -97,104 +97,47 @@ defmodule BravoCreditWeb.DashboardLive do
         </.form>
       </div>
 
-      <div class="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">
+      <div class="mt-6">
         <section class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
           <.header>
-            Applications
-            <:subtitle>Newest applications with their current aggregate snapshot.</:subtitle>
+            Listado de Solicitudes
+            <:subtitle>
+              Solicitudes recientes con su estado de riesgo actual y decisión comercial.
+            </:subtitle>
           </.header>
 
           <.table id="applications" rows={@snapshot.applications}>
-            <:col :let={application} label="Application">
+            <:col :let={application} label="Solicitud">
               <div class="font-semibold">{application.id}</div>
               <div class="text-xs text-base-content/60">{application.country_code}</div>
             </:col>
-            <:col :let={application} label="Stage">
+            <:col :let={application} label="Etapa">
               <% stage = Monitoring.current_stage(application) %>
-              <span class={["badge badge-sm", stage.tone]}>{stage.label}</span>
+              <span class={["badge badge-sm", stage.tone]}>{stage_translation(stage.label)}</span>
             </:col>
-            <:col :let={application} label="Status">
+            <:col :let={application} label="Estado">
               <span class={["badge badge-sm", status_badge(application.status)]}>
-                {humanize_atom(application.status)}
+                {status_translation(application.status)}
               </span>
             </:col>
-            <:col :let={application} label="Risk">
+            <:col :let={application} label="Riesgo">
               <span class="badge badge-sm badge-outline">
-                {humanize_atom(application.risk_status)}
+                {status_translation(application.risk_status)}
               </span>
             </:col>
-            <:col :let={application} label="Requested">
+            <:col :let={application} label="Fecha Solicitud">
               {format_datetime(application.requested_at)}
             </:col>
             <:action :let={application}>
               <.link
                 navigate={~p"/applications/#{application.id}"}
-                class="link link-primary text-sm"
+                class="link link-primary font-medium text-sm"
               >
-                Open
+                Ver Detalles
               </.link>
             </:action>
           </.table>
         </section>
-
-        <div class="space-y-6">
-          <section class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <.header>
-              Queue Snapshot
-              <:subtitle>Counts by Oban queue and current state.</:subtitle>
-            </.header>
-
-            <%= for {queue, states} <- Enum.sort_by(@snapshot.queue_snapshot, fn {queue, _states} -> queue end) do %>
-              <div class="mb-4 last:mb-0">
-                <div class="font-semibold uppercase text-xs tracking-wide text-base-content/60">
-                  {queue}
-                </div>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <%= for {state, count} <- Enum.sort_by(states, fn {state, _count} -> state end) do %>
-                    <span class="badge badge-outline badge-sm">{state}: {count}</span>
-                  <% end %>
-                </div>
-              </div>
-            <% end %>
-          </section>
-
-          <section class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <.header>
-              Outbox
-              <:subtitle>
-                Current state of rows created by the PostgreSQL-triggered outbox flow.
-              </:subtitle>
-            </.header>
-
-            <div class="flex flex-wrap gap-2">
-              <%= for status <- [:pending, :processing, :processed, :failed] do %>
-                <span class="badge badge-outline badge-sm">
-                  {humanize_atom(status)}: {Map.get(@snapshot.outbox_counts, status, 0)}
-                </span>
-              <% end %>
-            </div>
-          </section>
-
-          <section class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-            <.header>
-              Recent Activity
-              <:subtitle>Most recent application and webhook events.</:subtitle>
-            </.header>
-
-            <.list>
-              <:item :for={activity <- @snapshot.recent_activity} title={activity.event_type}>
-                <div class="text-sm">
-                  <span class="font-medium">{activity.country_code || "N/A"}</span>
-                  <span class="mx-2 text-base-content/50">•</span>
-                  <span>{activity.application_id || "no-application"}</span>
-                </div>
-                <div class="text-xs text-base-content/60">
-                  {activity.actor} • {format_datetime(activity.inserted_at)}
-                </div>
-              </:item>
-            </.list>
-          </section>
-        </div>
       </div>
     </div>
     """
@@ -257,14 +200,29 @@ defmodule BravoCreditWeb.DashboardLive do
   defp status_badge(:provider_processing), do: "badge-warning"
   defp status_badge(_status), do: "badge-info"
 
-  defp humanize_atom(nil), do: "Unknown"
+  defp status_translation(:pending), do: "Pendiente"
+  defp status_translation(:provider_processing), do: "Procesando Validador"
+  defp status_translation(:evaluating), do: "Evaluando Riesgo"
+  defp status_translation(:approved), do: "Aprobada"
+  defp status_translation(:rejected), do: "Rechazada"
+  defp status_translation(:in_review), do: "En Revisión Manual"
+  defp status_translation(:cancelled), do: "Cancelada"
 
-  defp humanize_atom(value) when is_atom(value) do
-    value
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
+  defp status_translation(:low), do: "Bajo"
+  defp status_translation(:medium), do: "Medio"
+  defp status_translation(:high), do: "Alto"
+  defp status_translation(nil), do: "Desconocido"
+
+  defp status_translation(value) when is_atom(value) do
+    value |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
   end
+
+  defp stage_translation("Pending Data"), do: "Esperando Datos"
+  defp stage_translation("Fetching Data"), do: "Consultando Proveedor"
+  defp stage_translation("Evaluating Risk"), do: "Calculando Riesgo"
+  defp stage_translation("In Review"), do: "Revisión Manual"
+  defp stage_translation("Finalized"), do: "Finalizada"
+  defp stage_translation(other), do: other
 
   defp format_datetime(nil), do: "n/a"
 

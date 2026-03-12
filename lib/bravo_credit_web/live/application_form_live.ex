@@ -62,71 +62,44 @@ defmodule BravoCreditWeb.ApplicationFormLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
       <.header>
-        Create Application
+        Crear Solicitud
         <:subtitle>
-          Use valid MX or CO documents to trigger the full provider and risk pipeline.
+          Ingresa los datos del cliente para iniciar el proceso de evaluación de crédito. Usa identificadores de países válidos (MX/CO).
         </:subtitle>
         <:actions>
-          <.button navigate={~p"/operations"} variant="primary">Back to Operations</.button>
+          <.button navigate={~p"/operations"} variant="primary">Volver a Operaciones</.button>
         </:actions>
       </.header>
 
-      <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
-          <div :if={@submit_error} class="mb-4 rounded-box border border-error/30 bg-error/10 p-4">
-            <div class="font-semibold text-error">{@submit_error.code}</div>
-            <div class="mt-1 text-sm">{@submit_error.message}</div>
-            <pre class="mt-3 overflow-x-auto text-xs">{pretty_json(@submit_error.details)}</pre>
+      <div class="mt-6 rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
+        <div :if={@submit_error} class="mb-4 rounded-box border border-error/30 bg-error/10 p-4">
+          <div class="font-semibold text-error">{@submit_error.code}</div>
+          <div class="mt-1 text-sm">{@submit_error.message}</div>
+          <pre class="mt-3 overflow-x-auto text-xs">{pretty_json(@submit_error.details)}</pre>
+        </div>
+
+        <.form id="application-form" for={@form} phx-change="validate" phx-submit="save">
+          <div class="grid gap-4 md:grid-cols-2">
+            <.input
+              field={@form[:country_code]}
+              type="select"
+              label="País (Country)"
+              options={country_options()}
+            />
+            <.input field={@form[:full_name]} label="Nombre Completo" />
+            <.input field={@form[:document_id]} label="ID / Documento (ej. CURP)" />
+            <.input field={@form[:amount]} type="number" step="0.01" label="Monto Solicitado" />
+            <.input field={@form[:monthly_income]} type="number" step="0.01" label="Ingreso Mensual" />
+            <.input field={@form[:channel]} label="Canal de Origen" />
           </div>
 
-          <.form id="application-form" for={@form} phx-change="validate" phx-submit="save">
-            <div class="grid gap-4 md:grid-cols-2">
-              <.input
-                field={@form[:country_code]}
-                type="select"
-                label="Country"
-                options={country_options()}
-              />
-              <.input field={@form[:full_name]} label="Full Name" />
-              <.input field={@form[:document_id]} label="Document ID" />
-              <.input field={@form[:amount]} type="number" step="0.01" label="Amount" />
-              <.input field={@form[:monthly_income]} type="number" step="0.01" label="Monthly Income" />
-              <.input field={@form[:channel]} label="Channel" />
-            </div>
-
-            <div class="mt-6 flex items-center gap-3">
-              <.button type="submit">Create and Monitor</.button>
-              <.button navigate={~p"/operations"} class="btn btn-ghost">Cancel</.button>
-            </div>
-          </.form>
-        </section>
-
-        <section class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm">
-          <.header>
-            Reference Inputs
-            <:subtitle>These examples are already valid for the current country configs.</:subtitle>
-          </.header>
-
-          <.list>
-            <:item title="Mexico document">`GODE561231HDFRRN04`</:item>
-            <:item title="Colombia document">`1234567890`</:item>
-            <:item title="MX monthly income">`25000.00`</:item>
-            <:item title="CO monthly income">`1500000.00`</:item>
-          </.list>
-
-          <div class="mt-6 rounded-box bg-base-200 p-4 text-sm text-base-content/70">
-            After submit, the request will:
-            <ol class="ml-4 mt-2 list-decimal space-y-1">
-              <li>persist the application</li>
-              <li>enqueue provider fetch</li>
-              <li>persist provider data</li>
-              <li>enqueue risk evaluation</li>
-              <li>persist the final decision</li>
-            </ol>
+          <div class="mt-8 flex justify-end gap-3">
+            <.button navigate={~p"/operations"} class="btn btn-ghost">Cancelar</.button>
+            <.button type="submit">Crear Solicitud y Evaluar</.button>
           </div>
-        </section>
+        </.form>
       </div>
     </div>
     """

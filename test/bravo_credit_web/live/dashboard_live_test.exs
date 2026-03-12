@@ -17,9 +17,9 @@ defmodule BravoCreditWeb.DashboardLiveTest do
 
     {:ok, _view, html} = live(conn, ~p"/operations")
 
-    assert html =~ "Operations Console"
+    assert html =~ "Control de Solicitudes (Backoffice)"
     assert html =~ application.id
-    assert html =~ "Applications"
+    assert html =~ "Listado de Solicitudes"
   end
 
   defp unique_mx_document_id do
