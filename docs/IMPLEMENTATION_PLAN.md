@@ -245,6 +245,8 @@ Construir el modelo de datos y las primitivas de dominio antes de flujos y UI.
 - `payload`
 - `status`
 - `application_id`
+- `error_code`, `:string`
+- `error_message`, `:string`
 
 #### `event_outbox`
 
@@ -256,7 +258,9 @@ Construir el modelo de datos y las primitivas de dominio antes de flujos y UI.
 - `status`
 - `attempts`
 - `next_attempt_at`
-- `last_error`
+- `last_error_code`, `:string`
+- `last_error_message`, `:string`
+- `last_error_details`, `:map`
 - `processed_at`
 
 ### Schemas y modulos
@@ -266,8 +270,39 @@ Construir el modelo de datos y las primitivas de dominio antes de flujos y UI.
 - `BravoCredit.Applications.ApplicationEvent`
 - `BravoCredit.Webhooks.WebhookEvent`
 - `BravoCredit.Outbox.Event`
+- `BravoCredit.Error`
+- `BravoCredit.Errors`
 - `BravoCredit.Applications.StateMachine`
 - `BravoCredit.Applications.Queries`
+
+### Modelo de errores base
+
+Definir desde Fase 1 un contrato unico de errores:
+
+- `code`
+- `message`
+- `details`
+- `http_status`
+- `source`
+- `step`
+- `retryable?`
+
+Catalogo minimo para arrancar:
+
+- `validation.invalid_params`
+- `country.unsupported`
+- `document.invalid_format`
+- `rules.initial_rejected`
+- `application.duplicate_document`
+- `application.not_found`
+- `state.invalid_transition`
+- `auth.unauthenticated`
+- `auth.forbidden_country`
+- `provider.unreachable`
+- `provider.invalid_response`
+- `webhook.duplicate_event`
+- `outbox.dispatch_failed`
+- `system.internal_error`
 
 ### Entregables
 
@@ -275,6 +310,7 @@ Construir el modelo de datos y las primitivas de dominio antes de flujos y UI.
 - schemas compilan
 - indices criticos creados
 - `lock_version` listo para optimistic locking
+- contrato de error definido antes de controllers y workers
 
 ---
 
@@ -383,6 +419,7 @@ El `Pipeline.Context` debe contener como minimo:
 - endpoint de create funcionando
 - job de provider queda en Oban
 - evento `application.created` queda persistido
+- steps retornan errores estructurados
 - tests unitarios por step
 - test de integracion del pipeline de create
 
@@ -488,6 +525,7 @@ Cubrir la operacion principal del sistema desde API.
 ### Modulos
 
 - `BravoCreditWeb.ApplicationController`
+- `BravoCreditWeb.FallbackController`
 - `BravoCredit.Applications`
 - `BravoCredit.Applications.Queries`
 - `BravoCredit.Pipelines.UpdateApplicationState`
@@ -511,6 +549,8 @@ Cubrir la operacion principal del sistema desde API.
 
 - endpoints list/get/update
 - auth y autorizacion por recurso
+- envelope de error estable para toda la API
+- mapeo consistente de `BravoCredit.Error` a HTTP status
 - tests de transiciones validas e invalidas
 
 ---
@@ -596,6 +636,8 @@ Implementar:
 - migration del trigger
 - worker del outbox
 - idempotencia por `(source, idempotency_key)`
+- persistencia de `last_error_code` y `last_error_message`
+- retries solo para errores `retryable?`
 - tests de duplicate webhook
 
 ---

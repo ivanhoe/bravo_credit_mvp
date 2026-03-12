@@ -24,7 +24,6 @@ config :bravo_credit, BravoCredit.Repo,
 # you can enable the server option below.
 config :bravo_credit, BravoCreditWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "rPMQgxqWYXlAuUcSt55BQucLk+SgcrU6y0EcuALBNPPueh7NUfHlH71IdXzTBczK",
   server: false
 
 # In test we don't send emails

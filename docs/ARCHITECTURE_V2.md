@@ -315,6 +315,8 @@ Para idempotencia y trazabilidad:
 - `payload`
 - `status`
 - `application_id`
+- `error_code`
+- `error_message`
 
 **Constraint recomendado**:
 
@@ -380,7 +382,126 @@ Reglas del contexto:
 - los rules engines y steps de negocio leen `input`, no `raw_params`
 - `application` solo existe despues de persistir
 - `provider_data` solo existe despues del worker de integracion
-- todos los errores se agregan en `errors` con `step`, `code` y `message`
+- `errors` es una lista de `%BravoCredit.Error{}`
+- todos los errores se agregan en `errors` con `step`, `code`, `message` y `details`
+
+### 6.8 Modelo de errores
+
+El sistema no debe propagar strings libres ni excepciones crudas como contrato de negocio.
+Todo error de dominio, pipeline, worker o API debe representarse con un shape estable.
+
+```elixir
+defmodule BravoCredit.Error do
+  @enforce_keys [:code, :message]
+  defstruct [:code, :message, :http_status, :source, :step, :retryable?, details: %{}]
+end
+```
+
+Reglas del modelo:
+
+- `code` es estable y machine-readable
+- `message` es seguro para exponer a cliente o logs
+- `details` solo contiene contexto serializable y no sensible
+- `source` identifica el boundary: `validation`, `domain`, `provider`, `webhook`, `auth`, `system`
+- `step` se llena cuando el error nace dentro de un pipeline
+- `retryable?` se usa para workers, providers y outbox
+
+### 6.8.1 Envelope de error para API
+
+La API debe responder siempre con el mismo envelope:
+
+```json
+{
+  "error": {
+    "code": "document.invalid_format",
+    "message": "Document format is invalid",
+    "details": {
+      "field": "document_id"
+    }
+  }
+}
+```
+
+Para validaciones con multiples campos, se mantiene un solo `code` de alto nivel y se listan errores por campo en `details`.
+
+```json
+{
+  "error": {
+    "code": "validation.invalid_params",
+    "message": "Request payload is invalid",
+    "details": {
+      "fields": {
+        "amount": ["must be greater than 0"],
+        "country_code": ["is required"]
+      }
+    }
+  }
+}
+```
+
+### 6.8.2 Catalogo base de errores
+
+Codigos minimos para el MVP:
+
+| Code | HTTP | Source | Retryable | Uso |
+|---|---:|---|---|---|
+| `validation.invalid_params` | 400 | validation | no | payload invalido |
+| `country.unsupported` | 422 | domain | no | pais no soportado |
+| `document.invalid_format` | 422 | validation | no | documento invalido |
+| `rules.initial_rejected` | 422 | domain | no | regla inicial rechaza la solicitud |
+| `application.duplicate_document` | 409 | domain | no | documento ya registrado |
+| `application.not_found` | 404 | domain | no | solicitud inexistente |
+| `state.invalid_transition` | 409 | domain | no | transicion de estado invalida |
+| `auth.unauthenticated` | 401 | auth | no | falta autenticacion |
+| `auth.forbidden_country` | 403 | auth | no | sin acceso al pais/recurso |
+| `provider.unreachable` | 503 | provider | yes | timeout o red del proveedor |
+| `provider.invalid_response` | 502 | provider | no | respuesta corrupta o invalida |
+| `webhook.duplicate_event` | 409 | webhook | no | evento duplicado |
+| `outbox.dispatch_failed` | 503 | system | yes | fallo en side effect del outbox |
+| `system.internal_error` | 500 | system | no | error no clasificado |
+
+El catalogo puede crecer, pero estos codigos deben existir desde la primera implementacion para evitar contratos inconsistentes.
+
+### 6.8.3 Mapeo a HTTP
+
+Reglas base:
+
+- `400` para payload o query params invalidos
+- `401` para falta de autenticacion
+- `403` para autorizacion fallida
+- `404` para recurso inexistente
+- `409` para conflictos o transiciones invalidas
+- `422` para validacion de negocio
+- `502` para respuesta invalida de integracion externa
+- `503` para dependencia temporalmente indisponible
+- `500` para errores internos no clasificados
+
+### 6.8.4 Persistencia de errores
+
+La persistencia no debe guardar solo texto libre.
+
+- `Pipeline.Context.errors` guarda `%BravoCredit.Error{}`
+- `webhook_events` guarda `error_code` y `error_message` para auditoria
+- `event_outbox` guarda `last_error_code`, `last_error_message` y `last_error_details`
+- `application_events` puede incluir un bloque `error` en `payload` cuando el fallo es parte del flujo auditado
+
+Shape recomendado para `payload.error`:
+
+```json
+{
+  "code": "provider.unreachable",
+  "message": "Provider request timed out",
+  "retryable": true
+}
+```
+
+### 6.8.5 Politica de uso
+
+- Controllers y pipelines no construyen JSON de error ad-hoc
+- Workers retornan `{:error, %BravoCredit.Error{}}` para distinguir retryable vs non-retryable
+- `FallbackController` o capa equivalente traduce `BravoCredit.Error` a HTTP
+- Logs y eventos usan `code` como identificador principal, no parsing de mensajes
+- No exponer stacktraces, SQL errors ni payloads sensibles al cliente
 
 ---
 
@@ -548,7 +669,9 @@ Campos minimos:
 - `status`
 - `attempts`
 - `next_attempt_at`
-- `last_error`
+- `last_error_code`
+- `last_error_message`
+- `last_error_details`
 - `processed_at`
 - `inserted_at`
 

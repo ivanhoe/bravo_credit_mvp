@@ -26,7 +26,6 @@ config :bravo_credit, BravoCreditWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "thZIQmkq/kj9ynS94nMymsABudi9QBuDJheUIJckw35mpCG761cps7e1bzxaqlwD",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:bravo_credit, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:bravo_credit, ~w(--watch)]}

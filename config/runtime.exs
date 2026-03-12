@@ -20,24 +20,26 @@ if System.get_env("PHX_SERVER") do
   config :bravo_credit, BravoCreditWeb.Endpoint, server: true
 end
 
+fetch_env! = fn name ->
+  System.get_env(name) ||
+    raise """
+    environment variable #{name} is missing.
+
+    Copy .env.example to .env and load it into your shell before running Mix commands.
+    """
+end
+
+secret_key_base = fetch_env!.("SECRET_KEY_BASE")
+guardian_secret_key = fetch_env!.("GUARDIAN_SECRET_KEY")
+cloak_key = fetch_env!.("CLOAK_KEY")
+
+if byte_size(cloak_key) != 32 do
+  raise "environment variable CLOAK_KEY must be exactly 32 bytes for AES.GCM."
+end
+
 config :bravo_credit, BravoCreditWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
-
-guardian_secret_key =
-  System.get_env("GUARDIAN_SECRET_KEY") ||
-    if config_env() == :prod do
-      raise "environment variable GUARDIAN_SECRET_KEY is missing."
-    else
-      "dev-only-guardian-secret-key-change-me-in-production"
-    end
-
-cloak_key =
-  System.get_env("CLOAK_KEY") ||
-    if config_env() == :prod do
-      raise "environment variable CLOAK_KEY is missing."
-    else
-      "01234567890123456789012345678901"
-    end
+  http: [port: String.to_integer(System.get_env("PORT", "4000"))],
+  secret_key_base: secret_key_base
 
 config :bravo_credit, BravoCredit.Accounts.Guardian,
   issuer: "bravo_credit",
@@ -66,18 +68,6 @@ if config_env() == :prod do
     # pool_count: 4,
     socket_options: maybe_ipv6
 
-  # The secret key base is used to sign/encrypt cookies and other secrets.
-  # A default value is used in config/dev.exs and config/test.exs but you
-  # want to use a different value for prod and you most likely don't want
-  # to check this value into version control, so we use an environment
-  # variable instead.
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
-
   host = System.get_env("PHX_HOST") || "example.com"
 
   config :bravo_credit, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
@@ -90,8 +80,7 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
-    ],
-    secret_key_base: secret_key_base
+    ]
 
   # ## SSL Support
   #
