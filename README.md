@@ -16,6 +16,7 @@ This repository utilizes `docker compose` to provide a zero-configuration, insta
 ```sh
 1. cp .env.example .env
 2. docker compose up --build -d
+3. open http://localhost:4000/operations
 ```
 
 > The API and the interactive UI will be available immediately at `http://localhost:4000/operations`.
