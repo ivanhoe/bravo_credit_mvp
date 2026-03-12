@@ -7,11 +7,25 @@ defmodule BravoCredit.Countries.Validator do
   alias BravoCredit.Countries.CountryConfig.Document
   alias BravoCredit.Countries.CountryConfig.Provider
   alias BravoCredit.Countries.Rule
+  alias BravoCredit.Applications.Application, as: CreditApplication
 
-  @allowed_top_level_keys ~w(country_code country_name currency document rules provider review metadata)
+  @allowed_top_level_keys ~w(
+    country_code
+    country_name
+    currency
+    document
+    rules
+    provider
+    state_transitions
+    review
+    metadata
+  )
   @allowed_document_keys ~w(type validator)
   @allowed_provider_keys ~w(adapter timeout_ms)
   @allowed_rule_keys ~w(id kind evaluation_phase message threshold amount metadata)
+  @state_lookup Enum.into(Ecto.Enum.values(CreditApplication, :status), %{}, fn state ->
+                  {Atom.to_string(state), state}
+                end)
 
   @rule_kinds %{
     "max_amount_to_income_ratio" => :max_amount_to_income_ratio,
@@ -33,6 +47,7 @@ defmodule BravoCredit.Countries.Validator do
          {:ok, document} <- validate_document(raw_config["document"], validator_registry),
          {:ok, rules} <- validate_rules(raw_config["rules"]),
          {:ok, provider} <- validate_provider(raw_config["provider"], provider_registry),
+         {:ok, state_transitions} <- validate_state_transitions(raw_config["state_transitions"]),
          {:ok, review} <- validate_optional_map(raw_config["review"], "review"),
          {:ok, metadata} <- validate_optional_map(raw_config["metadata"], "metadata"),
          :ok <- validate_unique_rule_ids(rules) do
@@ -44,6 +59,7 @@ defmodule BravoCredit.Countries.Validator do
          document: document,
          rules: rules,
          provider: provider,
+         state_transitions: state_transitions,
          review: review,
          metadata: metadata
        }}
@@ -180,6 +196,23 @@ defmodule BravoCredit.Countries.Validator do
     end
   end
 
+  defp validate_state_transitions(nil), do: {:ok, %{}}
+
+  defp validate_state_transitions(state_transitions) when not is_map(state_transitions) do
+    {:error, "state_transitions must be a map"}
+  end
+
+  defp validate_state_transitions(state_transitions) do
+    Enum.reduce_while(state_transitions, {:ok, %{}}, fn {from_state, raw_targets}, {:ok, acc} ->
+      with {:ok, normalized_from_state} <- normalize_state(from_state, "state_transitions key"),
+           {:ok, normalized_targets} <- normalize_state_targets(raw_targets, from_state) do
+        {:cont, {:ok, Map.put(acc, normalized_from_state, normalized_targets)}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
   defp validate_optional_map(nil, _section), do: {:ok, %{}}
   defp validate_optional_map(map, _section) when is_map(map), do: {:ok, map}
   defp validate_optional_map(_map, section), do: {:error, "#{section} must be a map"}
@@ -254,5 +287,37 @@ defmodule BravoCredit.Countries.Validator do
       {:ok, decimal} -> {:ok, decimal}
       :error -> {:error, "#{field_name} must be a decimal"}
     end
+  end
+
+  defp normalize_state(state, field_name) when is_binary(state) do
+    normalized_state =
+      state
+      |> String.trim()
+      |> String.downcase()
+
+    case Map.fetch(@state_lookup, normalized_state) do
+      {:ok, value} -> {:ok, value}
+      :error -> {:error, "#{field_name} contains unsupported state: #{inspect(state)}"}
+    end
+  end
+
+  defp normalize_state(_state, field_name), do: {:error, "#{field_name} must be a string"}
+
+  defp normalize_state_targets(raw_targets, from_state) when is_list(raw_targets) do
+    raw_targets
+    |> Enum.reduce_while({:ok, []}, fn raw_target, {:ok, acc} ->
+      case normalize_state(raw_target, "state_transitions.#{from_state}") do
+        {:ok, normalized_target} -> {:cont, {:ok, [normalized_target | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, normalized_targets} -> {:ok, Enum.reverse(normalized_targets)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp normalize_state_targets(_raw_targets, from_state) do
+    {:error, "state_transitions.#{from_state} must be a list"}
   end
 end

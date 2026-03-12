@@ -6,21 +6,12 @@ defmodule BravoCredit.Webhooks.Processor do
   alias BravoCredit.Applications
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.ApplicationEvent
+  alias BravoCredit.Applications.StatePolicy
   alias BravoCredit.Errors
   alias BravoCredit.Repo
   alias BravoCredit.Webhooks
   alias BravoCredit.Webhooks.WebhookEvent
   alias Ecto.Multi
-
-  @allowed_transitions %{
-    pending: [:approved, :rejected, :in_review],
-    provider_processing: [:approved, :rejected, :in_review],
-    evaluating: [:approved, :rejected, :in_review],
-    in_review: [:approved, :rejected],
-    approved: [],
-    rejected: [],
-    cancelled: []
-  }
 
   @type process_result :: {:ok, map()} | {:error, BravoCredit.Error.t()}
 
@@ -108,7 +99,7 @@ defmodule BravoCredit.Webhooks.Processor do
 
   defp build_effect(webhook_event, application, target_state, risk_status) do
     if target_state == application.status or
-         target_state in Map.get(@allowed_transitions, application.status, []) do
+         StatePolicy.allowed?(application.country_code, application.status, target_state) do
       {:ok,
        %{
          current_state: application.status,

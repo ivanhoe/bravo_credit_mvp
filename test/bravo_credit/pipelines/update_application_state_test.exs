@@ -37,6 +37,16 @@ defmodule BravoCredit.Pipelines.UpdateApplicationStateTest do
     assert error.code == "auth.forbidden_country"
   end
 
+  test "enforces country-specific transition policies" do
+    user = user_fixture(role: :admin, country_access: ["CO"])
+    application = application_fixture("CO", :approved, :approved)
+
+    assert {:error, error} =
+             UpdateApplicationState.call(application.id, %{"state" => "cancelled"}, user)
+
+    assert error.code == "state.invalid_transition"
+  end
+
   defp user_fixture(attrs) do
     %User{}
     |> User.changeset(
@@ -59,7 +69,7 @@ defmodule BravoCredit.Pipelines.UpdateApplicationStateTest do
           "full_name" => "Jane Doe",
           "document_id" => document_id_for(country_code),
           "amount" => "50000.00",
-          "monthly_income" => "25000.00"
+          "monthly_income" => default_monthly_income(country_code)
         },
         "public_api"
       )
@@ -75,4 +85,6 @@ defmodule BravoCredit.Pipelines.UpdateApplicationStateTest do
 
   defp document_id_for("MX"), do: "GODE561231HDFRRN04"
   defp document_id_for("CO"), do: "1234567890"
+  defp default_monthly_income("MX"), do: "25000.00"
+  defp default_monthly_income("CO"), do: "1500000.00"
 end

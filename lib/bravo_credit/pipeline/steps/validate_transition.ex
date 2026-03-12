@@ -5,20 +5,14 @@ defmodule BravoCredit.Pipeline.Steps.ValidateTransition do
 
   @behaviour BravoCredit.Pipeline.Step
 
+  alias BravoCredit.Applications.StatePolicy
   alias BravoCredit.Errors
-
-  @allowed_transitions %{
-    pending: [:provider_processing, :cancelled],
-    provider_processing: [:evaluating, :cancelled],
-    evaluating: [:approved, :rejected, :in_review],
-    in_review: [:approved, :rejected, :cancelled],
-    approved: [:cancelled]
-  }
 
   @impl true
   def call(%{application: application, raw_params: raw_params} = context) do
     with {:ok, target_state} <- parse_target_state(raw_params),
-         :ok <- ensure_transition_allowed(application.status, target_state) do
+         :ok <-
+           ensure_transition_allowed(application.country_code, application.status, target_state) do
       {:ok, %{context | decision: %{target_state: target_state}}}
     end
   end
@@ -44,10 +38,8 @@ defmodule BravoCredit.Pipeline.Steps.ValidateTransition do
     end
   end
 
-  defp ensure_transition_allowed(current_state, target_state) do
-    allowed_states = Map.get(@allowed_transitions, current_state, [])
-
-    if target_state in allowed_states do
+  defp ensure_transition_allowed(country_code, current_state, target_state) do
+    if StatePolicy.allowed?(country_code, current_state, target_state) do
       :ok
     else
       {:error, Errors.invalid_transition(current_state, target_state)}

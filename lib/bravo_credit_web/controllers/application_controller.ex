@@ -18,7 +18,11 @@ defmodule BravoCreditWeb.ApplicationController do
   def show(conn, %{"id" => application_id}) do
     with {:ok, application} <-
            Applications.get_authorized(application_id, conn.assigns.current_user) do
-      render(conn, :show, application: application)
+      render(conn, :show,
+        application: application,
+        detail: true,
+        available_transitions: Applications.available_transitions(application)
+      )
     end
   end
 

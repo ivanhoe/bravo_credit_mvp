@@ -20,6 +20,14 @@ defmodule BravoCreditWeb.ApplicationControllerAuthTest do
 
     assert response["data"]["id"] == application.id
     assert response["data"]["country_code"] == "MX"
+    assert response["data"]["country_name"] == "Mexico"
+    assert response["data"]["full_name"] == "Jane Doe"
+    assert response["data"]["document_type"] == "CURP"
+    assert response["data"]["document_id_masked"] =~ "RN04"
+    refute Map.has_key?(response["data"], "document_id")
+    assert response["data"]["available_transitions"] == ["cancelled"]
+    assert response["data"]["banking_info"]["provider_reference"] =~ "9876"
+    assert response["data"]["banking_info"]["clabe"] =~ "3210"
   end
 
   test "GET /api/applications filters to authorized countries", %{conn: conn} do
@@ -108,7 +116,11 @@ defmodule BravoCreditWeb.ApplicationControllerAuthTest do
 
     application
     |> CreditApplication.update_changeset(%{
-      banking_info: %{"provider" => "bank_#{String.downcase(country_code)}"},
+      banking_info: %{
+        "provider" => "bank_#{String.downcase(country_code)}",
+        "provider_reference" => "ref-9876",
+        "clabe" => "0123456789012343210"
+      },
       status: status,
       risk_status: risk_status
     })

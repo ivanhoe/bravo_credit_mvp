@@ -8,6 +8,7 @@ defmodule BravoCredit.Monitoring do
   alias BravoCredit.Accounts.User
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.ApplicationEvent
+  alias BravoCredit.Applications.StatePolicy
   alias BravoCredit.Errors
   alias BravoCredit.Outbox.Event, as: OutboxEvent
   alias BravoCredit.Repo
@@ -19,16 +20,6 @@ defmodule BravoCredit.Monitoring do
   @detail_limit 25
   @all_countries "ALL"
   @all_statuses "ALL"
-
-  @allowed_transitions %{
-    pending: [:provider_processing, :cancelled],
-    provider_processing: [:evaluating, :cancelled],
-    evaluating: [:approved, :rejected, :in_review],
-    in_review: [:approved, :rejected],
-    approved: [:cancelled],
-    rejected: [],
-    cancelled: []
-  }
 
   @type dashboard_snapshot :: %{
           applications: [Application.t()],
@@ -79,7 +70,8 @@ defmodule BravoCredit.Monitoring do
            webhooks: webhooks(application.id),
            outbox_events: outbox_events(application.id),
            jobs: jobs(application.id),
-           available_transitions: Map.get(@allowed_transitions, application.status, []),
+           available_transitions:
+             StatePolicy.available_transitions(application.country_code, application.status),
            generated_at: DateTime.utc_now()
          }}
 

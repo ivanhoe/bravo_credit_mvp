@@ -6,6 +6,7 @@ defmodule BravoCredit.Applications do
   alias BravoCredit.Accounts.User
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.Queries
+  alias BravoCredit.Applications.StatePolicy
   alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Pipelines.CreateApplication
   alias BravoCredit.Pipelines.UpdateApplicationState
@@ -44,6 +45,11 @@ defmodule BravoCredit.Applications do
           {:error, BravoCredit.Errors.forbidden_country(application.country_code)}
         end
     end
+  end
+
+  @spec available_transitions(Application.t()) :: [Application.status()]
+  def available_transitions(%Application{} = application) do
+    StatePolicy.available_transitions(application.country_code, application.status)
   end
 
   @spec update_state(Ecto.UUID.t(), map(), User.t()) ::

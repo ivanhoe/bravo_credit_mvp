@@ -27,7 +27,11 @@ defmodule BravoCredit.Countries.ValidatorTest do
           "message" => "ratio exceeded"
         }
       ],
-      "provider" => %{"adapter" => "bank_mx", "timeout_ms" => 5000}
+      "provider" => %{"adapter" => "bank_mx", "timeout_ms" => 5000},
+      "state_transitions" => %{
+        "approved" => [],
+        "in_review" => ["approved", "rejected"]
+      }
     }
 
     assert {:ok, config} = Validator.validate(raw_config, @validator_registry, @provider_registry)
@@ -36,6 +40,7 @@ defmodule BravoCredit.Countries.ValidatorTest do
     assert config.document.validator_module == BravoCredit.Documents.CURP
     assert config.provider.adapter_module == BravoCredit.Banking.Providers.MX
     assert [%{kind: :max_amount_to_income_ratio, threshold: %Decimal{}}] = config.rules
+    assert config.state_transitions == %{approved: [], in_review: [:approved, :rejected]}
   end
 
   test "rejects unknown validators" do
@@ -78,6 +83,23 @@ defmodule BravoCredit.Countries.ValidatorTest do
     }
 
     assert {:error, "rule ids must be unique per country"} =
+             Validator.validate(raw_config, @validator_registry, @provider_registry)
+  end
+
+  test "rejects unsupported states in transition policies" do
+    raw_config = %{
+      "country_code" => "CO",
+      "country_name" => "Colombia",
+      "currency" => "COP",
+      "document" => %{"type" => "CC", "validator" => "cc_basic"},
+      "rules" => [],
+      "provider" => %{"adapter" => "bank_co", "timeout_ms" => 8000},
+      "state_transitions" => %{
+        "approved" => ["archived"]
+      }
+    }
+
+    assert {:error, "state_transitions.approved contains unsupported state: \"archived\""} =
              Validator.validate(raw_config, @validator_registry, @provider_registry)
   end
 end

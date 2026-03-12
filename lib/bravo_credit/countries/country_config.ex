@@ -39,6 +39,7 @@ defmodule BravoCredit.Countries.CountryConfig do
     :document,
     :rules,
     :provider,
+    state_transitions: %{},
     review: %{},
     metadata: %{}
   ]
@@ -50,6 +51,7 @@ defmodule BravoCredit.Countries.CountryConfig do
           document: Document.t(),
           rules: [Rule.t()],
           provider: Provider.t(),
+          state_transitions: %{optional(atom()) => [atom()]},
           review: map(),
           metadata: map()
         }

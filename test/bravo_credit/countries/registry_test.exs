@@ -12,14 +12,16 @@ defmodule BravoCredit.Countries.RegistryTest do
              country_name: "Mexico",
              currency: "MXN",
              document: %{type: "CURP", validator_module: BravoCredit.Documents.CURP},
-             provider: %{adapter_module: BravoCredit.Banking.Providers.MX}
+             provider: %{adapter_module: BravoCredit.Banking.Providers.MX},
+             state_transitions: %{approved: [:cancelled]}
            } = configs["MX"]
 
     assert %{
              country_name: "Colombia",
              currency: "COP",
              document: %{type: "CC", validator_module: BravoCredit.Documents.CC},
-             provider: %{adapter_module: BravoCredit.Banking.Providers.CO}
+             provider: %{adapter_module: BravoCredit.Banking.Providers.CO},
+             state_transitions: %{approved: [], in_review: [:approved, :rejected]}
            } = configs["CO"]
   end
 

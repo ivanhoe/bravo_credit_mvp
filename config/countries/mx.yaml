@@ -17,5 +17,25 @@ provider:
   adapter: bank_mx
   timeout_ms: 5000
 
+state_transitions:
+  pending:
+    - provider_processing
+    - cancelled
+  provider_processing:
+    - evaluating
+    - cancelled
+  evaluating:
+    - approved
+    - rejected
+    - in_review
+  in_review:
+    - approved
+    - rejected
+    - cancelled
+  approved:
+    - cancelled
+  rejected: []
+  cancelled: []
+
 review:
   high_amount_threshold: "200000"
