@@ -1,4 +1,5 @@
 set shell := ["zsh", "-cu"]
+set dotenv-load := true
 
 default:
   @just --list
@@ -7,7 +8,7 @@ db-up:
   docker compose up -d postgres
 
 app-up:
-  docker compose --profile app up --build
+  docker compose up --build
 
 app-down:
   docker compose down
@@ -24,14 +25,14 @@ db-ps:
 setup:
   mix setup
 
-seed-demo:
+seed-data:
   mix run priv/repo/seeds.exs
 
-demo-tokens:
-  mix bravo.demo.tokens
+seed-tokens:
+  mix bravo.seed.tokens
 
-demo-tokens-env:
-  mix bravo.demo.tokens --env
+seed-tokens-env:
+  mix bravo.seed.tokens --env
 
 server:
   mix phx.server

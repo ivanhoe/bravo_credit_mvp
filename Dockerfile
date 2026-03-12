@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.19.5-erlang-28.1.1-debian-bookworm-20250804 AS build
+FROM elixir:1.19.5-otp-28 AS build
 
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends build-essential git ca-certificates && \
@@ -18,13 +18,11 @@ RUN mix deps.compile
 
 COPY priv priv
 COPY lib lib
-COPY assets assets
 
-RUN mix assets.deploy
 RUN mix compile
 RUN mix release
 
-FROM debian:bookworm-slim AS app
+FROM debian:trixie-slim AS app
 
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends openssl libstdc++6 libncurses6 ca-certificates && \
@@ -37,6 +35,7 @@ ENV MIX_ENV=prod
 ENV PHX_SERVER=true
 
 COPY --from=build /app/_build/prod/rel/bravo_credit ./
+COPY config/countries config/countries
 COPY docker/entrypoint.sh /usr/local/bin/bravo-credit-entrypoint
 
 RUN chmod +x /usr/local/bin/bravo-credit-entrypoint
