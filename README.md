@@ -5,7 +5,7 @@ This project implements the full backend flow requested by the technical challen
 
 A LiveView interface is provided as an Operations Console at `http://localhost:4000/operations`.
 
-This README is strictly structured to comply with the 7 key sections requested in **"Parte 6. Entregables"** of the challenge PDF.
+This README covers the essential architectural guidelines and the technical implementations supporting the system.
 
 ---
 
@@ -40,7 +40,7 @@ PostgreSQL acts as the absolute source of truth. The application follows a Domai
 Main persisted entities:
 *   **`applications`:** The main aggregate snapshot containing encrypted PII, dynamic financial data, and current operational states (Pending, Evaluating, Approved).
 *   **`application_events`:** Append-only persistence model for deep business audit history over time.
-*   **`event_outbox`:** Used for Transactional Outbox. **Populated via a native PostgreSQL trigger** reacting to the `application_events` table (Requested in section 3.7 of the PDF).
+*   **`event_outbox`:** Used for Transactional Outbox. **Populated via a native PostgreSQL trigger** reacting to the `application_events` table.
 *   **`webhook_events`:** Persistent table storing external callback signatures to guarantee payload idempotency on retries.
 *   **`oban_jobs`:** Native queue tables to distribute tasks in PostgreSQL reliably.
 
@@ -96,7 +96,7 @@ If the system was subjected to tens of millions of credit requests, the persiste
 
 ### Implemented Extras
 - Kubernetes Configurations (k8s manifests included in `./k8s/`).
-- Complete originations expanded into 6 countries (PDF strictly required 2 minimum).
+- Complete originations expanded into 6 countries.
 - Native Realtime interactive flow directly integrated (LiveView).
 
 _(For auxiliary documentation on cURL workflows and Database Seeding, see `./docs/API_AND_SEEDING.md`)_
