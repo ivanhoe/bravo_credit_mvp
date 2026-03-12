@@ -61,8 +61,15 @@ defmodule BravoCredit.Workers.EvaluateRiskTest do
     assert Repo.exists?(
              from event in OutboxEvent,
                where:
-                 event.aggregate_id == ^application.id and
+                 event.aggregate_type == "application_event" and
                    event.event_type == "application.risk_evaluated"
            )
+
+    assert Repo.all(from event in OutboxEvent)
+           |> Enum.any?(fn event ->
+             event.aggregate_type == "application_event" and
+               event.event_type == "application.risk_evaluated" and
+               event.payload["application_id"] == application.id
+           end)
   end
 end

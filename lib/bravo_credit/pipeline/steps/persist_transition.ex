@@ -1,6 +1,8 @@
 defmodule BravoCredit.Pipeline.Steps.PersistTransition do
   @moduledoc """
-  Persists a manual state transition, audit event, and outbox record atomically.
+  Persists a manual state transition and audit event atomically.
+
+  The outbox row is created by the database trigger on `application_events`.
   """
 
   @behaviour BravoCredit.Pipeline.Step
@@ -8,7 +10,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistTransition do
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.ApplicationEvent
   alias BravoCredit.Errors
-  alias BravoCredit.Outbox.Event, as: OutboxEvent
   alias BravoCredit.Repo
   alias Ecto.Multi
 
@@ -24,7 +25,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistTransition do
       Multi.new()
       |> Multi.update(:application, transition_changeset(application, target_state))
       |> Multi.insert(:application_event, &application_event_changeset(&1, actor, context))
-      |> Multi.insert(:outbox_event, &outbox_event_changeset(&1, context))
 
     case Repo.transaction(multi) do
       {:ok, %{application: updated_application, application_event: application_event}} ->
@@ -79,20 +79,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistTransition do
         "to_state" => Atom.to_string(context.decision.target_state),
         "risk_status" =>
           Atom.to_string(target_risk_status(application, context.decision.target_state))
-      }
-    })
-  end
-
-  defp outbox_event_changeset(%{application: application}, context) do
-    OutboxEvent.changeset(%OutboxEvent{}, %{
-      aggregate_type: "application",
-      aggregate_id: application.id,
-      event_type: "application.state_changed",
-      payload: %{
-        "application_id" => application.id,
-        "country_code" => application.country_code,
-        "request_id" => context.request_id,
-        "to_state" => Atom.to_string(context.decision.target_state)
       }
     })
   end

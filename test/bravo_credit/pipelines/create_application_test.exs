@@ -7,7 +7,7 @@ defmodule BravoCredit.Pipelines.CreateApplicationTest do
   alias BravoCredit.Pipelines.CreateApplication
   alias Oban.Job
 
-  test "persists the application, event, outbox entry, and provider job" do
+  test "persists the application, event, trigger-backed outbox entry, and provider job" do
     params = %{
       "country_code" => "MX",
       "full_name" => "Jane Doe",
@@ -26,13 +26,8 @@ defmodule BravoCredit.Pipelines.CreateApplicationTest do
 
     assert Repo.aggregate(Application, :count) == 1
     assert Repo.aggregate(ApplicationEvent, :count) == 1
-    assert Repo.aggregate(OutboxEvent, :count) == 2
+    assert Repo.aggregate(OutboxEvent, :count) == 1
     assert Repo.aggregate(Job, :count) == 1
-
-    assert Repo.aggregate(
-             Ecto.Query.from(event in OutboxEvent, where: event.aggregate_type == "application"),
-             :count
-           ) == 1
 
     assert Repo.aggregate(
              Ecto.Query.from(event in OutboxEvent,
@@ -40,6 +35,12 @@ defmodule BravoCredit.Pipelines.CreateApplicationTest do
              ),
              :count
            ) == 1
+
+    assert [%OutboxEvent{} = outbox_event] = Repo.all(OutboxEvent)
+    assert outbox_event.aggregate_type == "application_event"
+    assert outbox_event.aggregate_id == hd(context.events).id
+    assert outbox_event.payload["application_id"] == context.application.id
+    assert outbox_event.payload["source_event_type"] == "application.created"
 
     assert [%Job{} = job] = Repo.all(Job)
     assert job.worker == "BravoCredit.Workers.FetchProviderData"

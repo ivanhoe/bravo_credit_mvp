@@ -1,6 +1,8 @@
 defmodule BravoCredit.Pipeline.Steps.PersistRiskDecision do
   @moduledoc """
-  Persists the final risk decision, audit event, and outbox entry atomically.
+  Persists the final risk decision and audit event atomically.
+
+  PostgreSQL creates the outbox row from the inserted `application_event`.
   """
 
   @behaviour BravoCredit.Pipeline.Step
@@ -8,7 +10,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistRiskDecision do
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.ApplicationEvent
   alias BravoCredit.Errors
-  alias BravoCredit.Outbox.Event, as: OutboxEvent
   alias BravoCredit.Repo
   alias Ecto.Multi
 
@@ -19,7 +20,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistRiskDecision do
       Multi.new()
       |> Multi.update(:application, decision_changeset(application, decision))
       |> Multi.insert(:application_event, &application_event_changeset(&1, context))
-      |> Multi.insert(:outbox_event, &outbox_event_changeset(&1, context))
 
     case Repo.transaction(multi) do
       {:ok, %{application: updated_application, application_event: application_event}} ->
@@ -60,20 +60,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistRiskDecision do
         "risk_score" => context.decision.risk_score,
         "risk_status" => Atom.to_string(context.decision.risk_status),
         "reason" => normalize_reason(context.decision[:reason])
-      }
-    })
-  end
-
-  defp outbox_event_changeset(%{application: application}, context) do
-    OutboxEvent.changeset(%OutboxEvent{}, %{
-      aggregate_type: "application",
-      aggregate_id: application.id,
-      event_type: "application.risk_evaluated",
-      payload: %{
-        "application_id" => application.id,
-        "country_code" => application.country_code,
-        "request_id" => context.request_id,
-        "outcome" => Atom.to_string(context.decision.outcome)
       }
     })
   end

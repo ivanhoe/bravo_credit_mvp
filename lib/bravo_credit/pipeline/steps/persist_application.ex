@@ -1,13 +1,15 @@
 defmodule BravoCredit.Pipeline.Steps.PersistApplication do
   @moduledoc """
-  Persists the application, audit event, outbox record, and provider job in one transaction.
+  Persists the application, audit event, and provider job in one transaction.
+
+  The `application_event` insert triggers PostgreSQL to create the corresponding
+  outbox row atomically.
   """
 
   @behaviour BravoCredit.Pipeline.Step
 
   alias BravoCredit.Applications.ApplicationEvent
   alias BravoCredit.Errors
-  alias BravoCredit.Outbox.Event, as: OutboxEvent
   alias BravoCredit.Repo
   alias BravoCredit.Workers.FetchProviderData
   alias Ecto.Multi
@@ -18,7 +20,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistApplication do
       Multi.new()
       |> Multi.insert(:application, application_changeset)
       |> Multi.insert(:application_event, &application_event_changeset(&1, context))
-      |> Multi.insert(:outbox_event, &outbox_event_changeset(&1, context))
       |> Oban.insert(:fetch_provider_data_job, &fetch_provider_data_job(&1, context))
 
     case Repo.transaction(multi) do
@@ -47,19 +48,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistApplication do
         "country_code" => application.country_code,
         "request_id" => context.request_id,
         "status" => Atom.to_string(application.status)
-      }
-    })
-  end
-
-  defp outbox_event_changeset(%{application: application}, context) do
-    OutboxEvent.changeset(%OutboxEvent{}, %{
-      aggregate_type: "application",
-      aggregate_id: application.id,
-      event_type: "application.created",
-      payload: %{
-        "application_id" => application.id,
-        "country_code" => application.country_code,
-        "request_id" => context.request_id
       }
     })
   end

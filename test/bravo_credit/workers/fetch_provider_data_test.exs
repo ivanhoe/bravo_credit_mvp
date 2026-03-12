@@ -84,9 +84,16 @@ defmodule BravoCredit.Workers.FetchProviderDataTest do
     assert Repo.exists?(
              from event in OutboxEvent,
                where:
-                 event.aggregate_id == ^application.id and
+                 event.aggregate_type == "application_event" and
                    event.event_type == "application.provider_data_received"
            )
+
+    assert Repo.all(from event in OutboxEvent)
+           |> Enum.any?(fn event ->
+             event.aggregate_type == "application_event" and
+               event.event_type == "application.provider_data_received" and
+               event.payload["application_id"] == application.id
+           end)
 
     evaluate_risk_jobs =
       from(job in Job, where: job.worker == "BravoCredit.Workers.EvaluateRisk")

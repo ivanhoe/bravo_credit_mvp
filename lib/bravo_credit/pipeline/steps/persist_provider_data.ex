@@ -1,6 +1,8 @@
 defmodule BravoCredit.Pipeline.Steps.PersistProviderData do
   @moduledoc """
-  Persists sanitized provider data, app event, outbox record, and next risk job atomically.
+  Persists sanitized provider data, app event, and next risk job atomically.
+
+  The inserted `application_event` is mirrored into the outbox by PostgreSQL.
   """
 
   @behaviour BravoCredit.Pipeline.Step
@@ -8,7 +10,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistProviderData do
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.ApplicationEvent
   alias BravoCredit.Errors
-  alias BravoCredit.Outbox.Event, as: OutboxEvent
   alias BravoCredit.Repo
   alias BravoCredit.Workers.EvaluateRisk
   alias Ecto.Multi
@@ -19,7 +20,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistProviderData do
       Multi.new()
       |> Multi.update(:application, provider_data_changeset(application, provider_data))
       |> Multi.insert(:application_event, &application_event_changeset(&1, context))
-      |> Multi.insert(:outbox_event, &outbox_event_changeset(&1, context))
       |> Oban.insert(:evaluate_risk_job, &evaluate_risk_job(&1, context))
 
     case Repo.transaction(multi) do
@@ -58,19 +58,6 @@ defmodule BravoCredit.Pipeline.Steps.PersistProviderData do
         "country_code" => application.country_code,
         "request_id" => context.request_id,
         "status" => "evaluating"
-      }
-    })
-  end
-
-  defp outbox_event_changeset(%{application: application}, context) do
-    OutboxEvent.changeset(%OutboxEvent{}, %{
-      aggregate_type: "application",
-      aggregate_id: application.id,
-      event_type: "application.provider_data_received",
-      payload: %{
-        "application_id" => application.id,
-        "country_code" => application.country_code,
-        "request_id" => context.request_id
       }
     })
   end
