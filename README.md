@@ -11,29 +11,15 @@ This README is strictly structured to comply with the 7 key sections requested i
 
 ## 1. Instrucciones para instalar y ejecutar la solución
 
-This repository utilizes `docker compose` for zero-configuration, instant execution to favor the examiner's time.
-
-**Option A - Native Docker (Recommended for evaluators):**
-This starts PostgreSQL and the entire Elixir App pre-compiled.
+This repository utilizes `docker compose` to provide a zero-configuration, instant execution environment to respect the examiner's time. This command builds the Elixir application and provisions PostgreSQL automatically.
 
 ```sh
 1. cp .env.example .env
-2. docker compose up --build
+2. docker compose up --build -d
 ```
+
 > The API and the interactive UI will be available immediately at `http://localhost:4000/operations`.
-
-**Option B - Local Development (Mix):**
-This starts only PostgreSQL and builds Elixir natively.
-
-```sh
-1. cp .env.example .env
-2. docker compose up -d postgres
-3. set -a && source .env && set +a
-4. mix deps.get && mix ecto.setup
-5. mix phx.server
-```
-
-> **Note on `just`:** As requested in section `6.4`, a `justfile` is provided to simplify these workflows natively. If `just` is installed, running `just setup` followed by `just server` will automatically load `.env` and start everything.
+> The system health probe is verifiable at `http://localhost:4000/health`.
 
 ---
 
