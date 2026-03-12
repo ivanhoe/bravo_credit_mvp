@@ -117,6 +117,16 @@ defmodule BravoCredit.Errors do
     )
   end
 
+  @spec forbidden_action(String.t()) :: Error.t()
+  def forbidden_action(action) do
+    new("auth.forbidden_action", "You do not have permission to perform this action",
+      http_status: 403,
+      source: :auth,
+      retryable?: false,
+      details: %{action: action}
+    )
+  end
+
   @spec provider_unreachable(map()) :: Error.t()
   def provider_unreachable(details \\ %{}) do
     new("provider.unreachable", "Provider is temporarily unavailable",

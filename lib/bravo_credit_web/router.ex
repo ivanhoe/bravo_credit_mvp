@@ -14,6 +14,10 @@ defmodule BravoCreditWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :authenticated_api do
+    plug BravoCreditWeb.Plugs.AuthenticateUser
+  end
+
   scope "/", BravoCreditWeb do
     pipe_through :browser
 
@@ -24,6 +28,14 @@ defmodule BravoCreditWeb.Router do
     pipe_through :api
 
     post "/applications", ApplicationController, :create
+  end
+
+  scope "/api", BravoCreditWeb do
+    pipe_through [:api, :authenticated_api]
+
+    get "/applications", ApplicationController, :index
+    get "/applications/:id", ApplicationController, :show
+    patch "/applications/:id/state", ApplicationController, :update_state
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

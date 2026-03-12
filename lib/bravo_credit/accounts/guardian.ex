@@ -5,6 +5,8 @@ defmodule BravoCredit.Accounts.Guardian do
 
   use Guardian, otp_app: :bravo_credit
 
+  alias BravoCredit.Accounts
+
   @impl true
   def subject_for_token(%{id: id}, _claims) when not is_nil(id) do
     {:ok, to_string(id)}
@@ -14,7 +16,10 @@ defmodule BravoCredit.Accounts.Guardian do
 
   @impl true
   def resource_from_claims(%{"sub" => id}) do
-    {:ok, %{id: id}}
+    case Accounts.get_user(id) do
+      nil -> {:error, :resource_not_found}
+      user -> {:ok, user}
+    end
   end
 
   def resource_from_claims(_claims), do: {:error, :missing_subject}
