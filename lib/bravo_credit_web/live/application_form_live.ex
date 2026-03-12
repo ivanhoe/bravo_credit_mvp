@@ -79,7 +79,7 @@ defmodule BravoCreditWeb.ApplicationFormLive do
             <h1 class="mt-2 text-2xl font-semibold sm:text-3xl">Crear Solicitud</h1>
             <p class="mt-2 max-w-2xl text-sm text-white/85 sm:text-base">
               Ingresa los datos del cliente para iniciar el proceso de evaluación de crédito.
-              Usa identificadores de países válidos (MX/CO).
+              Usa identificadores de países válidos (BR/CO/ES/IT/MX/PT).
             </p>
           </div>
           <.button
@@ -106,14 +106,26 @@ defmodule BravoCreditWeb.ApplicationFormLive do
                 label="País"
                 options={country_options()}
               />
-              <.input field={@form[:full_name]} label="Nombre Completo" />
-              <.input field={@form[:document_id]} label="Documento de Identidad (ej. CURP/CC)" />
-              <.input field={@form[:amount]} type="number" step="0.01" label="Monto Solicitado" />
+              <.input field={@form[:full_name]} label="Nombre Completo" phx-debounce="blur" />
+              <.input
+                field={@form[:document_id]}
+                label={document_label(@form_params["country_code"])}
+                placeholder={document_placeholder(@form_params["country_code"])}
+                phx-debounce="blur"
+              />
+              <.input
+                field={@form[:amount]}
+                type="number"
+                step="0.01"
+                label="Monto Solicitado"
+                phx-debounce="blur"
+              />
               <.input
                 field={@form[:monthly_income]}
                 type="number"
                 step="0.01"
                 label="Ingreso Mensual"
+                phx-debounce="blur"
               />
             </div>
 
@@ -155,9 +167,76 @@ defmodule BravoCreditWeb.ApplicationFormLive do
 
   defp country_options do
     [
+      {"Brasil", "BR"},
+      {"Colombia", "CO"},
+      {"España", "ES"},
+      {"Italia", "IT"},
       {"México", "MX"},
-      {"Colombia", "CO"}
+      {"Portugal", "PT"}
     ]
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "must_be_11_digits"}
+       }) do
+    "El CPF debe contener exactamente 11 dígitos numéricos."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "repeated_digits"}
+       }) do
+    "El CPF no puede estar formado por dígitos repetidos."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "invalid_checksum"}
+       }) do
+    "El CPF/DNI parece ser incorrecto (falló la validación matemática)."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "must_be_8_digits_and_1_letter"}
+       }) do
+    "El DNI español debe tener exactamente 8 números y 1 letra al final."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "must_be_9_digits"}
+       }) do
+    "El NIF portugués debe contener exactamente 9 dígitos numéricos."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "invalid_prefix_pt"}
+       }) do
+    "El NIF portugués debe comenzar con un dígito válido (1, 2, 3, 5, 6, 8, 9)."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "invalid_format_co"}
+       }) do
+    "La Cédula colombiana debe contener entre 6 y 10 dígitos numéricos."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "invalid_format_mx"}
+       }) do
+    "La CURP mexicana debe contener 18 caracteres alfanuméricos en formato estándar."
+  end
+
+  defp submit_error_message(%Error{
+         code: "document.invalid_format",
+         details: %{reason: "invalid_format_it"}
+       }) do
+    "El Codice Fiscale debe tener 16 caracteres alfanuméricos en formato estándar."
   end
 
   defp submit_error_message(%Error{code: "document.invalid_format"}) do
@@ -179,4 +258,20 @@ defmodule BravoCreditWeb.ApplicationFormLive do
   defp submit_error_message(%Error{}) do
     "Revisa los datos e inténtalo de nuevo."
   end
+
+  defp document_label("MX"), do: "Clave Única (CURP)"
+  defp document_label("CO"), do: "Cédula de Ciudadanía (CC)"
+  defp document_label("BR"), do: "Cadastro de Pessoa Física (CPF)"
+  defp document_label("ES"), do: "Documento Nacional (DNI)"
+  defp document_label("IT"), do: "Codice Fiscale"
+  defp document_label("PT"), do: "Número de Identificação (NIF)"
+  defp document_label(_), do: "Documento de Identidad"
+
+  defp document_placeholder("MX"), do: "Ej. MOGG850101HDFRRN04"
+  defp document_placeholder("CO"), do: "Ej. 1023456789"
+  defp document_placeholder("BR"), do: "Ej. 12345678909 (11 dígitos)"
+  defp document_placeholder("ES"), do: "Ej. 12345678Z"
+  defp document_placeholder("IT"), do: "Ej. RSSMRA80A01H501U"
+  defp document_placeholder("PT"), do: "Ej. 123456789"
+  defp document_placeholder(_), do: ""
 end

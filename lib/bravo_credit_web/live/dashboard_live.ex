@@ -214,8 +214,12 @@ defmodule BravoCreditWeb.DashboardLive do
   defp country_options do
     [
       {"Todos los países", "ALL"},
+      {"Brasil", "BR"},
+      {"Colombia", "CO"},
+      {"España", "ES"},
+      {"Italia", "IT"},
       {"México", "MX"},
-      {"Colombia", "CO"}
+      {"Portugal", "PT"}
     ]
   end
 
