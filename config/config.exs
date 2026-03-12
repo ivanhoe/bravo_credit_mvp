@@ -20,7 +20,8 @@ config :bravo_credit, BravoCredit.Cache,
 config :bravo_credit, Oban,
   repo: BravoCredit.Repo,
   plugins: [
-    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Cron, crontab: [{"* * * * *", BravoCredit.Workers.DispatchOutbox}]}
   ],
   queues: [
     default: 10,
