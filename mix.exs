@@ -72,7 +72,8 @@ defmodule BravoCredit.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:mox, "~> 1.2", only: :test}
+      {:mox, "~> 1.2", only: :test},
+      {:tidewave, "~> 0.5.5", only: :dev}
     ]
   end
 

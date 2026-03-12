@@ -13,8 +13,8 @@ The project implements the full backend flow requested by the technical challeng
 ## Implemented Scope
 
 Core capabilities currently implemented:
-- `MX` and `CO` country configuration through YAML in `config/countries/*.yaml`
-- document validation for `CURP` and `CC`
+- `BR`, `CO`, `ES`, `IT`, `MX`, and `PT` country configuration through YAML in `config/countries/*.yaml`
+- document validation for `CPF`, `CC`, `DNI`, `Codice Fiscale`, `CURP`, and `NIF`
 - Railway-style pipelines with structured errors
 - `POST /api/applications`
 - `GET /api/applications`
@@ -40,7 +40,7 @@ Core capabilities currently implemented:
 ## Assumptions
 
 - The challenge is implemented as a production-sane MVP, not a fully productized lending platform.
-- `MX` and `CO` are implemented end to end as the proof of the multi-country architecture.
+- The six countries from the challenge brief are implemented through the same declarative country architecture.
 - External banking providers are simulated behind country adapters and webhooks.
 - The operations console is meant for reviewers and internal operators; the authenticated JSON API is the primary integration surface.
 - `GET /api/applications/:id` returns a safe detail payload: it includes the aggregate snapshot needed for operations, but masks document identifiers and redacts sensitive banking fields.
@@ -120,7 +120,7 @@ If you prefer `just`, its recipes load `.env` automatically once the file exists
 ## Seed Data
 
 The seed script creates:
-- `admin@bravo.test` with access to `MX, CO`
+- `admin@bravo.test` with access to `BR, CO, ES, IT, MX, PT`
 - `analyst-mx@bravo.test` with access to `MX`
 - `viewer-co@bravo.test` with access to `CO`
 - four sample applications in different states
