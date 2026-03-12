@@ -1,11 +1,11 @@
-defmodule Mix.Tasks.Bravo.Demo.Tokens do
-  @shortdoc "Prints JWTs for the seeded demo users"
+defmodule Mix.Tasks.Bravo.Seed.Tokens do
+  @shortdoc "Prints JWTs for the seeded local users"
 
   @moduledoc """
-  Prints JWTs for the seeded demo users created by `priv/repo/seeds.exs`.
+  Prints JWTs for the seeded local users created by `priv/repo/seeds.exs`.
 
-      mix bravo.demo.tokens
-      mix bravo.demo.tokens --env
+      mix bravo.seed.tokens
+      mix bravo.seed.tokens --env
   """
 
   use Mix.Task
@@ -34,7 +34,7 @@ defmodule Mix.Tasks.Bravo.Demo.Tokens do
       Repo.all(from user in User, where: user.email in ^@emails, order_by: user.email)
 
     if users == [] do
-      Mix.raise("No demo users found. Run `mix run priv/repo/seeds.exs` first.")
+      Mix.raise("No seeded users found. Run `mix run priv/repo/seeds.exs` first.")
     end
 
     Enum.each(users, fn user ->
