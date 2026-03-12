@@ -69,6 +69,8 @@ If you have `just` installed, the same shortcuts are available through the `Just
 - `docs/ARCHITECTURE.md` - initial architecture draft
 - `docs/ARCHITECTURE_V2.md` - refined architecture
 - `docs/IMPLEMENTATION_PLAN.md` - execution plan
+- `docs/CODING_GUIDELINES.md` - Elixir coding conventions for this repo
+- `docs/RAILWAY_AND_ERRORS.md` - project rules for Railway flows and error handling
 - `docs/DELIVERY_CHECKLIST.md` - final delivery checklist for the public repo
 
 ## Status

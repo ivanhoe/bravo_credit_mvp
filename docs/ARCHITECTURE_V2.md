@@ -58,6 +58,9 @@ El PDF pide al menos dos paises. Implementar dos bien da mejor resultado que imp
 6. **Escalabilidad sin complejidad prematura**
    Se disena para crecer, pero no se introduce infraestructura distribuida que no se va a demostrar en la prueba.
 
+7. **Errores esperados como datos**
+   Commands, pipelines y workers usan Railway Oriented Programming con `{:ok, value}` y `{:error, %BravoCredit.Error{}}`.
+
 ---
 
 ## 4. Stack tecnico

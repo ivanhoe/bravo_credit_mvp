@@ -87,6 +87,7 @@ Al final del MVP debe existir:
 - reglas y configuracion por pais en `config/countries/*.yaml`
 - `Pipeline.Context` unico para steps
 - estados controlados por modulo de state machine
+- Railway Oriented Programming para commands y pipelines
 
 ---
 
@@ -97,6 +98,8 @@ docs/
   ARCHITECTURE.md
   ARCHITECTURE_V2.md
   IMPLEMENTATION_PLAN.md
+  CODING_GUIDELINES.md
+  RAILWAY_AND_ERRORS.md
 
 lib/
   bravo_credit/
