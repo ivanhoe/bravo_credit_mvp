@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bravocredit-app
+  labels:
+    app: bravocredit
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bravocredit
+  template:
+    metadata:
+      labels:
+        app: bravocredit
+    spec:
+      containers:
+        - name: bravocredit-app
+          # Reemplazar con la imagen real del registry (e.g. ghcr.io/org/bravocredit:latest)
+          image: bravocredit-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: bravocredit-config
+            - secretRef:
+                name: bravocredit-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 20

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bravocredit-config
+data:
+  PORT: "4000"
+  PHX_HOST: "bravocredit.example.com"
+  # NOTA: En un entorno de produccion real y particionado, la URL de la DB
+  # podria incluir poolers externos como PgBouncer.
+  # DATABASE_URL: "ecto://postgres:password@postgres-service:5432/bravo_credit_prod"
