@@ -1,21 +1,21 @@
-country_code: MX
-country_name: Mexico
-currency: MXN
+country_code: IT
+country_name: Italy
+currency: EUR
 
 document:
-  type: CURP
-  validator: curp
+  type: CODICE_FISCALE
+  validator: codice_fiscale
 
 rules:
-  - id: amount_income_ratio
-    kind: max_amount_to_income_ratio
+  - id: min_income
+    kind: min_income
     evaluation_phase: initial
-    threshold: "4.0"
-    message: El monto solicitado no puede superar 4x el ingreso mensual
+    amount: "1800.00"
+    message: Il reddito mensile minimo deve essere almeno 1,800 EUR
 
 provider:
-  adapter: bank_mx
-  timeout_ms: 5000
+  adapter: bank_it
+  timeout_ms: 6500
 
 state_transitions:
   pending:
@@ -38,5 +38,4 @@ state_transitions:
   cancelled: []
 
 review:
-  high_amount_threshold: "200000"
-  min_auto_approval_score: 650
+  min_auto_approval_score: 660

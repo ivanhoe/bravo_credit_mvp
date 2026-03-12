@@ -1,21 +1,21 @@
-country_code: MX
-country_name: Mexico
-currency: MXN
+country_code: PT
+country_name: Portugal
+currency: EUR
 
 document:
-  type: CURP
-  validator: curp
+  type: NIF
+  validator: nif
 
 rules:
   - id: amount_income_ratio
     kind: max_amount_to_income_ratio
     evaluation_phase: initial
-    threshold: "4.0"
-    message: El monto solicitado no puede superar 4x el ingreso mensual
+    threshold: "3.5"
+    message: O montante solicitado nao pode exceder 3.5x o rendimento mensal
 
 provider:
-  adapter: bank_mx
-  timeout_ms: 5000
+  adapter: bank_pt
+  timeout_ms: 6000
 
 state_transitions:
   pending:
@@ -38,5 +38,4 @@ state_transitions:
   cancelled: []
 
 review:
-  high_amount_threshold: "200000"
-  min_auto_approval_score: 650
+  min_auto_approval_score: 640

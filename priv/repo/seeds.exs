@@ -11,7 +11,7 @@ users = [
     email: "admin@bravo.test",
     password_hash: String.duplicate("admin-demo-password-hash-", 3),
     role: :admin,
-    country_access: ["MX", "CO"]
+    country_access: ["BR", "CO", "ES", "IT", "MX", "PT"]
   },
   %{
     email: "analyst-mx@bravo.test",
