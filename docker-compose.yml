@@ -17,5 +17,23 @@ services:
       retries: 10
       start_period: 5s
 
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "ecto://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/bravo_credit_dev"
+      SECRET_KEY_BASE: "${SECRET_KEY_BASE}"
+      GUARDIAN_SECRET_KEY: "${GUARDIAN_SECRET_KEY}"
+      CLOAK_KEY: "${CLOAK_KEY}"
+      PHX_HOST: "${PHX_HOST:-localhost}"
+      PORT: 4000
+      PHX_SERVER: "true"
+    ports:
+      - "${PORT:-4000}:4000"
+
 volumes:
   postgres_data:

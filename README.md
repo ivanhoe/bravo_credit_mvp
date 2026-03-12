@@ -1,78 +1,257 @@
 # BravoCredit
 
-BravoCredit is a multi-country credit application MVP built with Phoenix, LiveView and PostgreSQL.
+BravoCredit is a multi-country credit application MVP built with Phoenix, Oban, and PostgreSQL.
+
+The project implements the full backend flow requested by the technical challenge:
+- create a credit application
+- fetch provider data asynchronously
+- evaluate risk asynchronously
+- expose authenticated query and manual state transition APIs
+- process incoming provider webhooks with idempotency
+- persist domain events and dispatch PostgreSQL-triggered outbox work
+
+## Implemented Scope
+
+Core capabilities currently implemented:
+- `MX` and `CO` country configuration through YAML in `config/countries/*.yaml`
+- document validation for `CURP` and `CC`
+- Railway-style pipelines with structured errors
+- `POST /api/applications`
+- `GET /api/applications`
+- `GET /api/applications/:id`
+- `PATCH /api/applications/:id/state`
+- `POST /api/webhooks/provider`
+- async jobs with Oban for provider fetch, risk evaluation, webhook processing, and outbox dispatch
+- append-only `application_events`
+- PostgreSQL trigger from `application_events` to `event_outbox`
+- JWT authentication and country-scoped authorization
+
+## Stack
+
+- Elixir / Phoenix / Phoenix LiveView
+- PostgreSQL
+- Ecto
+- Oban
+- Guardian
+- Cloak
+- Req
+- Cachex
+- YAML Elixir
 
 ## Quick Start
 
-1. Create and load your environment file:
+1. Create and load your environment file.
 
 ```bash
 cp .env.example .env
 source .env
 ```
 
-Generate secure values before the first run:
+2. Replace the example secrets in `.env`.
 
 ```bash
 mix phx.gen.secret
 mix phx.gen.secret
 ```
 
-Use one value for `SECRET_KEY_BASE` and another for `GUARDIAN_SECRET_KEY`. `SECRET_KEY_BASE` must be at least 64 characters and `CLOAK_KEY` must be exactly 32 characters.
-The default Docker Compose setup uses port `5433` to avoid conflicts with Postgres.app on macOS.
+Use one value for `SECRET_KEY_BASE` and another for `GUARDIAN_SECRET_KEY`.
+`CLOAK_KEY` must be exactly 32 bytes.
 
-2. Start PostgreSQL with Docker Compose:
+3. Start PostgreSQL.
 
 ```bash
 docker compose up -d postgres
 ```
 
-3. Install dependencies:
+4. Install dependencies and bootstrap the database.
 
 ```bash
 mix deps.get
-```
-
-4. Create and migrate the database:
-
-```bash
 mix ecto.setup
 ```
 
-5. Start the app:
+5. Start the app.
 
 ```bash
 mix phx.server
 ```
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+The API and UI will be available at `http://localhost:4000`.
+The health endpoint is `http://localhost:4000/health`.
 
-## Local Database
+## Demo Data
 
-The project uses `docker-compose.yml` to run PostgreSQL locally.
+The seed script creates:
+- `admin@bravo.test` with access to `MX, CO`
+- `analyst-mx@bravo.test` with access to `MX`
+- `viewer-co@bravo.test` with access to `CO`
+- four sample applications in different states
 
-Common commands:
+Run it explicitly at any time with:
+
+```bash
+mix run priv/repo/seeds.exs
+```
+
+To print JWTs for the seeded users:
+
+```bash
+mix bravo.demo.tokens
+```
+
+To emit shell exports:
+
+```bash
+mix bravo.demo.tokens --env
+```
+
+## Local Demo Flow
+
+1. Load a demo token.
+
+```bash
+eval "$(mix bravo.demo.tokens --env)"
+export TOKEN="$BRAVO_ANALYST_MX_TOKEN"
+```
+
+2. Create a new application.
+
+```bash
+curl -sS http://localhost:4000/api/applications \
+  -H 'content-type: application/json' \
+  -d '{
+    "country_code": "MX",
+    "full_name": "Jane Demo",
+    "document_id": "GODE561231HDFRRN04",
+    "amount": "50000.00",
+    "monthly_income": "25000.00",
+    "metadata": {"channel": "web"}
+  }'
+```
+
+3. List authorized applications.
+
+```bash
+curl -sS http://localhost:4000/api/applications \
+  -H "authorization: Bearer $TOKEN"
+```
+
+4. Inspect one application.
+
+```bash
+curl -sS http://localhost:4000/api/applications/<application-id> \
+  -H "authorization: Bearer $TOKEN"
+```
+
+5. Manually move an application already in review.
+
+```bash
+curl -sS -X PATCH http://localhost:4000/api/applications/<application-id>/state \
+  -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"state":"approved"}'
+```
+
+6. Simulate a provider webhook.
+
+```bash
+curl -sS -X POST http://localhost:4000/api/webhooks/provider \
+  -H 'content-type: application/json' \
+  -H 'x-idempotency-key: evt-demo-001' \
+  -d '{
+    "application_id": "<application-id>",
+    "event_type": "provider.manual_review_requested",
+    "reason": "provider requested extra checks"
+  }'
+```
+
+## Async and Challenge Mapping
+
+Critical jobs are inserted in the same transaction that persists business changes:
+- `FetchProviderData`
+- `EvaluateRisk`
+- `ProcessIncomingWebhook`
+
+The PostgreSQL-native async requirement is implemented separately:
+1. insert into `application_events`
+2. PostgreSQL trigger inserts a row into `event_outbox`
+3. `DispatchOutbox` drains pending rows
+4. non-critical side effects are executed from the outbox
+
+## Docker Workflow
+
+The default Compose flow runs only PostgreSQL for local development:
 
 ```bash
 docker compose up -d postgres
-docker compose ps
-docker compose logs -f postgres
-docker compose down
 ```
 
-`DATABASE_URL` and `TEST_DATABASE_URL` are expected to point to this Postgres instance.
+There is also an app container for a full demo:
 
-If you have `just` installed, the same shortcuts are available through the `Justfile`.
+```bash
+docker compose --profile app up --build
+```
 
-## Documentation
+The app container:
+- builds a production release
+- runs migrations on startup
+- starts Phoenix on port `4000`
 
-- `docs/ARCHITECTURE.md` - initial architecture draft
-- `docs/ARCHITECTURE_V2.md` - refined architecture
-- `docs/IMPLEMENTATION_PLAN.md` - execution plan
-- `docs/CODING_GUIDELINES.md` - Elixir coding conventions for this repo
-- `docs/RAILWAY_AND_ERRORS.md` - project rules for Railway flows and error handling
-- `docs/DELIVERY_CHECKLIST.md` - final delivery checklist for the public repo
+## Useful Commands
 
-## Status
+If you use `just`:
 
-Bootstrap in progress.
+```bash
+just db-up
+just setup
+just seed-demo
+just demo-tokens
+just test
+just lint
+just app-up
+```
+
+Without `just`:
+
+```bash
+mix test
+mix credo --strict
+mix run priv/repo/seeds.exs
+mix bravo.demo.tokens
+```
+
+## Tests
+
+The current suite covers:
+- schemas and changesets
+- country config loading and validation
+- document validation
+- rules engine
+- create application pipeline
+- provider worker and risk worker
+- authenticated application endpoints
+- PostgreSQL-triggered outbox dispatch
+- incoming provider webhook ingestion and processing
+
+Run the full suite with:
+
+```bash
+mix test
+```
+
+## Project Documentation
+
+- [Architecture v1](docs/ARCHITECTURE.md)
+- [Architecture v2](docs/ARCHITECTURE_V2.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Coding Guidelines](docs/CODING_GUIDELINES.md)
+- [Railway and Errors](docs/RAILWAY_AND_ERRORS.md)
+- [Delivery Checklist](docs/DELIVERY_CHECKLIST.md)
+
+## Tradeoffs
+
+This repository is intentionally scoped as a production-sane MVP:
+- two countries are implemented well instead of many superficially
+- external providers are simulated behind behaviours and adapters
+- advanced operations like realtime backoffice and Kubernetes manifests are left as evolution, not overbuilt into the MVP
+- some outbound side effects are represented by the outbox infrastructure without fully fleshed external integrations
