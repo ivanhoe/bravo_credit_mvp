@@ -1,6 +1,6 @@
 # BravoCredit
 
-BravoCredit is a multi-country credit application MVP built with **Phoenix, Oban, PostgreSQL, y LiveView**.  
+BravoCredit is a multi-country credit application MVP built with **Phoenix, Oban, PostgreSQL, and LiveView**.  
 This project implements the full backend flow requested by the technical challenge, including async provider data fetching, risk evaluation, native queueing, and webhook processing. 
 
 A LiveView interface is provided as an Operations Console at `http://localhost:4000/operations`.
@@ -9,7 +9,7 @@ This README is strictly structured to comply with the 7 key sections requested i
 
 ---
 
-## 1. Instrucciones para instalar y ejecutar la solución
+## 1. Setup and Execution Instructions
 
 This repository utilizes `docker compose` to provide a zero-configuration, instant execution environment to respect the examiner's time. This command builds the Elixir application and provisions PostgreSQL automatically.
 
@@ -23,7 +23,7 @@ This repository utilizes `docker compose` to provide a zero-configuration, insta
 
 ---
 
-## 2. Supuestos
+## 2. Assumptions
 
 *   The challenge is implemented as a production-sane MVP, not a fully productized lending platform.
 *   The system operates dynamically across the requested 6 countries (ES, PT, IT, MX, CO, BR), all powered by the same runtime architecture.
@@ -33,11 +33,11 @@ This repository utilizes `docker compose` to provide a zero-configuration, insta
 
 ---
 
-## 3. Modelo de Datos
+## 3. Data Model
 
 PostgreSQL acts as the absolute source of truth. The application follows a Domain-Driven flow where state is derived transactionally. 
 
-Entidades persistidas principales:
+Main persisted entities:
 *   **`applications`:** The main aggregate snapshot containing encrypted PII, dynamic financial data, and current operational states (Pending, Evaluating, Approved).
 *   **`application_events`:** Append-only persistence model for deep business audit history over time.
 *   **`event_outbox`:** Used for Transactional Outbox. **Populated via a native PostgreSQL trigger** reacting to the `application_events` table (Requested in section 3.7 of the PDF).
@@ -46,57 +46,57 @@ Entidades persistidas principales:
 
 ---
 
-## 4. Decisiones Técnicas
+## 4. Technical Decisions
 
-*   **Arquitectura Orientada a Datos (Data-Driven con YAML):** 
-    Instead of hardcoding hundreds of `if/else` lines per country in the Phoenix pipelines, the system leverages a **Strategy Pattern**. The entire feature set for a country (Umbrales de revisión financieros, moneda, regex de documentos como DNI o CPF) is defined statically in `config/countries/*.yaml`. The Elixir core acts purely as an agnostic execution engine.
-*   **Principio "Let It Crash" / Railway Pipelines:**
-    Business operations avoid magic strings and throw highly specialized `%BravoCredit.Error{}` structs explicitly parsed and sent back to the LiveView UI (Ej. _"El DNI requiere una letra"_, _"Proveedor Bancario inalcanzable"_).
-*   **LiveView (Patrón Observador):**
+*   **Data-Driven Architecture (YAML):** 
+    Instead of hardcoding hundreds of `if/else` lines per country in the Phoenix pipelines, the system leverages a **Strategy Pattern**. The entire feature set for a country (e.g., Financial thresholds, currency, document regexes like DNI or CPF) is defined statically in `config/countries/*.yaml`. The Elixir core acts purely as an agnostic execution engine.
+*   **"Let It Crash" / Railway Pipelines:**
+    Business operations avoid magic strings and throw highly specialized `%BravoCredit.Error{}` structs explicitly parsed and sent back to the LiveView UI (e.g., _"The DNI format requires 1 letter"_, _"Banking Provider unreachable"_).
+*   **LiveView (Observer Pattern):**
     Elixir PubSub is used heavily. However, instead of passing vast state objects over websocket nodes, the UI receives microscopic pings (`"application_updated"`) and queries the persistent PostgreSQL database directly, reducing memory overhead massively for realtime updates.
 
 ---
 
-## 5. Consideraciones de Seguridad
+## 5. Security Considerations
 
-*   **Encriptación de PII en Reposo:** Sensitive applicant information (Names, Identifiers) is structurally encrypted dynamically at rest via AES-GCM (Cipher) using `Cloak`. They can only be read back via in-memory keys (`CLOAK_KEY`).
-*   **Autenticación API:** Every internal path relies on strict Javascript Web Tokens (JWT) facilitated by `Guardian`.
-*   **Autorización Geográfica:** Elixir Plugs enforce country-scoped constraints (e.g. A Latin-American analyst trying to fetch `ES` applications via token gets instantly forbidden 403).
+*   **PII Encryption at Rest:** Sensitive applicant information (Names, Identifiers) is structurally encrypted dynamically at rest via AES-GCM (Cipher) using `Cloak`. They can only be read back via in-memory keys (`CLOAK_KEY`).
+*   **API Authentication:** Every internal path relies on strict Javascript Web Tokens (JWT) facilitated by `Guardian`.
+*   **Geographic Authorization:** Elixir Plugs enforce country-scoped constraints (e.g., A Latin-American analyst trying to fetch `ES` applications via token gets instantly forbidden with a 403).
 
 ---
 
-## 6. Análisis de escalabilidad y manejo de grandes volúmenes de datos
+## 6. Scalability and High Volume Data Handling
 
 If the system was subjected to tens of millions of credit requests, the persistence architecture is designed for vertical and horizontal read-heavy scaling:
 
-*   **Índices (Indices Recomendados):**
+*   **Recommended Indexes:**
     *   `(country_code, status)` applied directly to `applications` to prevent full table scans when rendering operations consoles.
     *   `(document_hash)` enables fast O(1) searches for duplicate or repeat loans without decrypting PII databases.
     *   `(application_id, inserted_at desc)` for fast timeline rendering on the `application_events` table.
-*   **Estrategia de Particionamiento (Table Structuring):**
+*   **Partitioning Strategy (Table Structuring):**
     For massive workloads, the core `applications` and `application_events` tables align flawlessly with PostgreSQL declarative partitioning **by `country_code`** (List Partitioning). This strictly localizes disk caching by zone, allowing the Mexico partition to spin on NVMe separate from European loads.
-*   **Cuellos de Botella (Asynchronous Eviction):**
+*   **Bottlenecks (Asynchronous Eviction):**
     To avoid HTTP bottlenecking in an API environment, synchronous workers never wait on external APIs or heavy IO blocking risk engines. Transactional bounds insert `Oban` rows locally immediately.
-*   **Estrategia de Archivado (Archiving):**
-    Approved or long-overdue applications (e.g. ~3 years) could be trivially evacuated safely using the `application_events` topic feed. The continuous outbox log acts effectively as a Change Data Capture (CDC) stream directly into S3 or a Cold Storage Lake, letting operations `TRUNCATE` cold partitions periodically without losing business compliance logic.
+*   **Archiving Strategy:**
+    Approved or long-overdue applications (e.g., ~3 years) could be trivially evacuated safely using the `application_events` topic feed. The continuous outbox log acts effectively as a Change Data Capture (CDC) stream directly into S3 or a Cold Storage Lake, letting operations `TRUNCATE` cold partitions periodically without losing business compliance logic.
 
 ---
 
-## 7. Estrategia de Concurrencia, Colas, Caché y Webhooks
+## 7. Concurrency, Queues, Cache & Webhooks Strategy
 
-*   **Colas y Concurrencia (Queuing & Concurrency):**
+*   **Queuing & Concurrency:**
     The app uses **Oban**. Oban achieves robust parallel execution powered entirely by PostgreSQL SKIP LOCKED mechanics minimizing orchestration overhead. The processing happens in distinct phases (`FetchProviderData` -> `EvaluateRiskScore`), handled simultaneously by independent parallel background workers.
-*   **Caché (Caching Strategy):**
+*   **Caching Strategy:**
     High-read & zero-write objects like the master configuration rules loaded from `countries/*.yaml` bypass the database completely using Erlang's native **ETS (Erlang Term Storage)** tables (`BravoCredit.Cache`).
     *   _Invalidation:_ The cache acts as an immutable lookup table for business rules loaded upon booting. Due to the high availability inherent to k8s deployments, cache invalidation simply occurs via a Rolling Graceful Pod restart.
-*   **Webhooks (Process Ext.):**
+*   **Webhooks (External Processes):**
     The application receives webhook updates (`POST /api/webhooks/provider`) via native idempotent keys. `webhook_events` is used defensively mapping external event IDs strictly; processing stops structurally throwing 409 Conflicts in the event a simulated banking provider double-pings a state update.
 
 ---
 
-### Extras Implementados
-- Configuración para Kubernetes (k8s manifests incluidos en `./k8s/`).
-- Validaciones completas expandidas hacia 6 países (PDF exigía 2 mínimos).
-- Flujo interactivo en tiempo real integrado directamente (LiveView).
+### Implemented Extras
+- Kubernetes Configurations (k8s manifests included in `./k8s/`).
+- Complete originations expanded into 6 countries (PDF strictly required 2 minimum).
+- Native Realtime interactive flow directly integrated (LiveView).
 
-_(Para documentación accesoria sobre recolección de base de datos vía curl consultar `./docs/API_AND_SEEDING.md`)_
+_(For auxiliary documentation on cURL workflows and Database Seeding, see `./docs/API_AND_SEEDING.md`)_
