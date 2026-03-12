@@ -11,6 +11,7 @@ defmodule BravoCredit.Application do
 
     children = [
       BravoCreditWeb.Telemetry,
+      BravoCredit.Vault,
       BravoCredit.Repo,
       {Cachex, name: BravoCredit.Cache.cache_name()},
       {Oban, Application.fetch_env!(:bravo_credit, Oban)},
