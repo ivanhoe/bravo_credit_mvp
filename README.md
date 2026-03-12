@@ -35,8 +35,14 @@ Core capabilities currently implemented:
 - Guardian
 - Cloak
 - Req
-- Cachex
 - YAML Elixir
+
+## Caching Strategy
+
+The application uses native Elixir **ETS (Erlang Term Storage)** for high-performance caching.
+Currently, this is used for validating and caching the Country Configurations loaded from YAML (`config/countries/*.yaml`).
+- **Why**: Country configuration rules evaluate extremely frequently and change rarely.
+- **Invalidation Strategy**: These configurations are populated at application startup. If a new country or rule is added, the pod is gracefully restarted.
 
 ## Quick Start
 
@@ -44,7 +50,9 @@ Core capabilities currently implemented:
 
 ```bash
 cp .env.example .env
+set -a
 source .env
+set +a
 ```
 
 2. Replace the example secrets in `.env`.
@@ -79,7 +87,9 @@ mix phx.server
 The API and UI will be available at `http://localhost:4000`.
 The health endpoint is `http://localhost:4000/health`.
 
-## Demo Data
+If you prefer `just`, its recipes load `.env` automatically once the file exists, so `just setup` and `just server` work without re-exporting variables manually.
+
+## Seed Data
 
 The seed script creates:
 - `admin@bravo.test` with access to `MX, CO`
@@ -96,21 +106,21 @@ mix run priv/repo/seeds.exs
 To print JWTs for the seeded users:
 
 ```bash
-mix bravo.demo.tokens
+mix bravo.seed.tokens
 ```
 
 To emit shell exports:
 
 ```bash
-mix bravo.demo.tokens --env
+mix bravo.seed.tokens --env
 ```
 
-## Local Demo Flow
+## Local Verification Flow
 
-1. Load a demo token.
+1. Load a seeded token.
 
 ```bash
-eval "$(mix bravo.demo.tokens --env)"
+eval "$(mix bravo.seed.tokens --env)"
 export TOKEN="$BRAVO_ANALYST_MX_TOKEN"
 ```
 
@@ -121,7 +131,7 @@ curl -sS http://localhost:4000/api/applications \
   -H 'content-type: application/json' \
   -d '{
     "country_code": "MX",
-    "full_name": "Jane Demo",
+    "full_name": "Jane Applicant",
     "document_id": "GODE561231HDFRRN04",
     "amount": "50000.00",
     "monthly_income": "25000.00",
@@ -157,7 +167,7 @@ curl -sS -X PATCH http://localhost:4000/api/applications/<application-id>/state 
 ```bash
 curl -sS -X POST http://localhost:4000/api/webhooks/provider \
   -H 'content-type: application/json' \
-  -H 'x-idempotency-key: evt-demo-001' \
+  -H 'x-idempotency-key: evt-ops-001' \
   -d '{
     "application_id": "<application-id>",
     "event_type": "provider.manual_review_requested",
@@ -186,10 +196,10 @@ The default Compose flow runs only PostgreSQL for local development:
 docker compose up -d postgres
 ```
 
-There is also an app container for a full demo:
+There is also an app container for the full stack runtime:
 
 ```bash
-docker compose --profile app up --build
+docker compose up --build
 ```
 
 The app container:
@@ -204,8 +214,8 @@ If you use `just`:
 ```bash
 just db-up
 just setup
-just seed-demo
-just demo-tokens
+just seed-data
+just seed-tokens
 just test
 just lint
 just app-up
@@ -217,7 +227,7 @@ Without `just`:
 mix test
 mix credo --strict
 mix run priv/repo/seeds.exs
-mix bravo.demo.tokens
+mix bravo.seed.tokens
 ```
 
 ## Tests
@@ -248,10 +258,30 @@ mix test
 - [Railway and Errors](docs/RAILWAY_AND_ERRORS.md)
 - [Delivery Checklist](docs/DELIVERY_CHECKLIST.md)
 
+## Scalability and High Volume Data Handling
+
+As requested by the challenge, here is the analysis on how the application handles growing to millions of credit applications:
+
+- **Database Indexes**: Critical queries are backed by specific indexes:
+  - `(country_code, status)` on `applications` for filtering the operations dashboard.
+  - `(country_code, requested_at desc)` on `applications` for chronological reading.
+  - `(document_hash)` on `applications` to quickly detect duplicate documents (avoiding PII search).
+  - `(application_id, inserted_at desc)` on `application_events` to retrieve history fast.
+- **Partitioning Strategy**: When reaching tens of millions of records, the `applications` and `application_events` tables are designed to be partitioned **by `country_code`**. This ensures data locality and allows isolating high-volume countries from smaller markets.
+- **Avoiding Bottlenecks**: Heavy operations like Risk Evaluation and API interactions with External Providers are moved *out* of the synchronous request cycle using Oban (queues). 
+- **Archiving**: Closed/Finalized applications (older than 3 years) could be archived by moving their records from the high-throughput operational PostgreSQL to a cold storage solution (like S3) using the `application_events` audit stream as the source of truth for the data lake.
+
+## Kubernetes Deployment (k8s)
+
+Kubernetes manifests are included in the `k8s/` directory to deploy the main components of this solution:
+- `k8s/deployment.yaml`: Defines the Pod replicas for the Elixir application.
+- `k8s/service.yaml`: Exposes the pods internally.
+- `k8s/ingress.yaml`: Routes external HTTP traffic to the service.
+- `k8s/configmap.yaml` & `k8s/secret.yaml`: Manage environment variables and secrets (simulated for the MVP).
+
 ## Tradeoffs
 
 This repository is intentionally scoped as a production-sane MVP:
 - two countries are implemented well instead of many superficially
 - external providers are simulated behind behaviours and adapters
-- advanced operations like realtime backoffice and Kubernetes manifests are left as evolution, not overbuilt into the MVP
 - some outbound side effects are represented by the outbox infrastructure without fully fleshed external integrations
