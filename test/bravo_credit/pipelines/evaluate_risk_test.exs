@@ -57,6 +57,52 @@ defmodule BravoCredit.Pipelines.EvaluateRiskTest do
     assert is_integer(context.application.risk_score)
   end
 
+  test "routes a spanish application to manual review for high requested amounts" do
+    application =
+      create_ready_application(
+        "ES",
+        %{
+          "provider" => "bank_es",
+          "provider_reference" => "es-4567",
+          "credit_score" => 700,
+          "total_debt" => "12000.00",
+          "income_stability" => "stable"
+        },
+        %{
+          "amount" => "40000.00",
+          "monthly_income" => "6000.00"
+        }
+      )
+
+    assert {:ok, context} = EvaluateRisk.call(application.id)
+    assert context.application.status == :in_review
+    assert context.application.risk_status == :manual_review
+    assert context.application.risk_score == 700
+  end
+
+  test "rejects a brazilian application when provider debt ratio exceeds the threshold" do
+    application =
+      create_ready_application(
+        "BR",
+        %{
+          "provider" => "bank_br",
+          "provider_reference" => "br-1122",
+          "credit_score" => 680,
+          "total_debt" => "3000.00",
+          "income_stability" => "steady"
+        },
+        %{
+          "amount" => "8000.00",
+          "monthly_income" => "5000.00"
+        }
+      )
+
+    assert {:ok, context} = EvaluateRisk.call(application.id)
+    assert context.application.status == :rejected
+    assert context.application.risk_status == :rejected
+    assert context.application.risk_score == 680
+  end
+
   defp create_ready_application(country_code, banking_info, overrides \\ %{}) do
     {:ok, application} =
       Applications.create(
@@ -84,4 +130,6 @@ defmodule BravoCredit.Pipelines.EvaluateRiskTest do
 
   defp document_id_for("MX"), do: "GODE561231HDFRRN04"
   defp document_id_for("CO"), do: "1234567890"
+  defp document_id_for("ES"), do: "12345678Z"
+  defp document_id_for("BR"), do: "52998224725"
 end

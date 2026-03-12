@@ -164,7 +164,7 @@ defmodule BravoCredit.Monitoring do
       id: "operations-console-admin",
       email: "operations-console@local",
       role: :admin,
-      country_access: ["MX", "CO"]
+      country_access: ["BR", "CO", "ES", "IT", "MX", "PT"]
     }
   end
 

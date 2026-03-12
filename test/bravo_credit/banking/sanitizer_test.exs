@@ -38,4 +38,24 @@ defmodule BravoCredit.Banking.SanitizerTest do
     assert sanitized["credit_history"] == "clean"
     assert sanitized["total_debt"] == "320000.00"
   end
+
+  test "sanitizes ES provider payloads" do
+    country_config = Registry.get!("ES")
+
+    assert {:ok, sanitized} =
+             Sanitizer.sanitize(country_config, %{
+               provider_reference: "es-1234",
+               credit_score: 690,
+               total_debt: Decimal.new("12000.00"),
+               income_stability: "stable",
+               ignored_field: "secret"
+             })
+
+    assert sanitized["provider"] == "bank_es"
+    assert sanitized["provider_reference"] == "es-1234"
+    assert sanitized["credit_score"] == 690
+    assert sanitized["total_debt"] == "12000.00"
+    assert sanitized["income_stability"] == "stable"
+    refute Map.has_key?(sanitized, "ignored_field")
+  end
 end

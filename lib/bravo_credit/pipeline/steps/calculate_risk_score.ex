@@ -8,19 +8,31 @@ defmodule BravoCredit.Pipeline.Steps.CalculateRiskScore do
   alias BravoCredit.Errors
 
   @impl true
-  def call(%{application: %{country_code: "MX", banking_info: banking_info}} = context) do
-    case Map.get(banking_info, "credit_score") do
-      score when is_integer(score) and score >= 0 and score <= 1_000 ->
-        {:ok, put_in(context.decision, merge_decision(context.decision, %{risk_score: score}))}
-
-      _other ->
-        {:error, Errors.provider_invalid_response(%{field: "credit_score"})}
+  def call(%{application: application} = context) do
+    with {:ok, risk_score} <- extract_risk_score(application) do
+      {:ok, put_in(context.decision, merge_decision(context.decision, %{risk_score: risk_score}))}
     end
   end
 
-  def call(%{application: %{country_code: "CO"} = application} = context) do
-    with {:ok, total_debt} <- decimal_from(application.banking_info, "total_debt"),
-         {:ok, ratio} <- safe_divide(total_debt, application.monthly_income) do
+  defp extract_risk_score(%{banking_info: banking_info} = application) do
+    case Map.get(banking_info, "credit_score") do
+      score when is_integer(score) and score >= 0 and score <= 1_000 ->
+        {:ok, score}
+
+      _other ->
+        extract_ratio_based_risk_score(application)
+    end
+  end
+
+  defp extract_ratio_based_risk_score(%{
+         banking_info: banking_info,
+         monthly_income: monthly_income
+       }) do
+    ratio_input = Map.put(banking_info, "monthly_income", monthly_income)
+
+    with {:ok, total_debt} <- decimal_from(ratio_input, "total_debt"),
+         {:ok, normalized_monthly_income} <- decimal_from(ratio_input, "monthly_income"),
+         {:ok, ratio} <- safe_divide(total_debt, normalized_monthly_income) do
       score =
         ratio
         |> Decimal.mult(Decimal.new("1000"))
@@ -29,7 +41,7 @@ defmodule BravoCredit.Pipeline.Steps.CalculateRiskScore do
         |> then(&(1_000 - &1))
         |> clamp_score()
 
-      {:ok, put_in(context.decision, merge_decision(context.decision, %{risk_score: score}))}
+      {:ok, score}
     else
       {:error, _reason} ->
         {:error, Errors.provider_invalid_response(%{field: "total_debt"})}

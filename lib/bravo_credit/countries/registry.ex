@@ -10,11 +10,19 @@ defmodule BravoCredit.Countries.Registry do
 
   @default_validator_registry %{
     "curp" => BravoCredit.Documents.CURP,
-    "cc_basic" => BravoCredit.Documents.CC
+    "cc_basic" => BravoCredit.Documents.CC,
+    "dni" => BravoCredit.Documents.DNI,
+    "nif" => BravoCredit.Documents.NIF,
+    "codice_fiscale" => BravoCredit.Documents.CodiceFiscale,
+    "cpf" => BravoCredit.Documents.CPF
   }
   @default_provider_registry %{
     "bank_mx" => BravoCredit.Banking.Providers.MX,
-    "bank_co" => BravoCredit.Banking.Providers.CO
+    "bank_co" => BravoCredit.Banking.Providers.CO,
+    "bank_es" => BravoCredit.Banking.Providers.ES,
+    "bank_pt" => BravoCredit.Banking.Providers.PT,
+    "bank_it" => BravoCredit.Banking.Providers.IT,
+    "bank_br" => BravoCredit.Banking.Providers.BR
   }
 
   @spec refresh!() :: %{String.t() => BravoCredit.Countries.CountryConfig.t()}

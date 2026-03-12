@@ -88,7 +88,7 @@ defmodule BravoCredit.Workers.FetchProviderDataTest do
                    event.event_type == "application.provider_data_received"
            )
 
-    assert Repo.all(from event in OutboxEvent)
+    assert Repo.all(from(event in OutboxEvent))
            |> Enum.any?(fn event ->
              event.aggregate_type == "application_event" and
                event.event_type == "application.provider_data_received" and

@@ -67,4 +67,32 @@ defmodule BravoCredit.Rules.EngineTest do
     assert error.details.rule_id == "debt_income_ratio"
     assert error.details.evaluation_phase == :provider
   end
+
+  test "PT initial rules reject an excessive amount to income ratio" do
+    country_config = Registry.get!("PT")
+
+    assert {:error, error} =
+             Engine.evaluate(country_config, :initial, %{
+               amount: Decimal.new("5000"),
+               monthly_income: Decimal.new("1000")
+             })
+
+    assert error.code == "rules.initial_rejected"
+    assert error.details.rule_id == "amount_income_ratio"
+  end
+
+  test "BR provider rules reject a high debt ratio" do
+    country_config = Registry.get!("BR")
+
+    assert {:error, error} =
+             Engine.evaluate(
+               country_config,
+               :provider,
+               %{monthly_income: Decimal.new("3000")},
+               %{total_debt: Decimal.new("1800")}
+             )
+
+    assert error.code == "rules.initial_rejected"
+    assert error.details.rule_id == "debt_income_ratio"
+  end
 end

@@ -53,7 +53,7 @@ defmodule BravoCredit.Pipelines.CreateApplicationTest do
 
   test "returns a structured error and annotates the failing step" do
     params = %{
-      "country_code" => "BR",
+      "country_code" => "CL",
       "full_name" => "Jane Doe",
       "document_id" => "1234567890",
       "amount" => "50000.00",

@@ -10,6 +10,6 @@ defmodule BravoCredit.Applications.StatePolicyTest do
   end
 
   test "falls back to the default transitions for unknown countries" do
-    assert StatePolicy.available_transitions("BR", :approved) == [:cancelled]
+    assert StatePolicy.available_transitions("CL", :approved) == [:cancelled]
   end
 end

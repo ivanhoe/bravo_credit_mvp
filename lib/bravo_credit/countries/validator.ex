@@ -3,11 +3,11 @@ defmodule BravoCredit.Countries.Validator do
   Validates and normalizes YAML country configuration into structs.
   """
 
+  alias BravoCredit.Applications.Application, as: CreditApplication
   alias BravoCredit.Countries.CountryConfig
   alias BravoCredit.Countries.CountryConfig.Document
   alias BravoCredit.Countries.CountryConfig.Provider
   alias BravoCredit.Countries.Rule
-  alias BravoCredit.Applications.Application, as: CreditApplication
 
   @allowed_top_level_keys ~w(
     country_code

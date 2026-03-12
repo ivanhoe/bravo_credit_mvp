@@ -5,11 +5,19 @@ defmodule BravoCredit.Countries.ValidatorTest do
 
   @validator_registry %{
     "curp" => BravoCredit.Documents.CURP,
-    "cc_basic" => BravoCredit.Documents.CC
+    "cc_basic" => BravoCredit.Documents.CC,
+    "dni" => BravoCredit.Documents.DNI,
+    "nif" => BravoCredit.Documents.NIF,
+    "codice_fiscale" => BravoCredit.Documents.CodiceFiscale,
+    "cpf" => BravoCredit.Documents.CPF
   }
   @provider_registry %{
     "bank_mx" => BravoCredit.Banking.Providers.MX,
-    "bank_co" => BravoCredit.Banking.Providers.CO
+    "bank_co" => BravoCredit.Banking.Providers.CO,
+    "bank_es" => BravoCredit.Banking.Providers.ES,
+    "bank_pt" => BravoCredit.Banking.Providers.PT,
+    "bank_it" => BravoCredit.Banking.Providers.IT,
+    "bank_br" => BravoCredit.Banking.Providers.BR
   }
 
   test "normalizes a valid country config" do
@@ -101,5 +109,24 @@ defmodule BravoCredit.Countries.ValidatorTest do
 
     assert {:error, "state_transitions.approved contains unsupported state: \"archived\""} =
              Validator.validate(raw_config, @validator_registry, @provider_registry)
+  end
+
+  test "normalizes European and Brazilian validators and providers" do
+    raw_config = %{
+      "country_code" => "es",
+      "country_name" => "Spain",
+      "currency" => "eur",
+      "document" => %{"type" => "dni", "validator" => "dni"},
+      "rules" => [],
+      "provider" => %{"adapter" => "bank_es", "timeout_ms" => 6000},
+      "review" => %{"high_amount_threshold" => "30000.00"}
+    }
+
+    assert {:ok, config} = Validator.validate(raw_config, @validator_registry, @provider_registry)
+    assert config.country_code == "ES"
+    assert config.currency == "EUR"
+    assert config.document.validator_module == BravoCredit.Documents.DNI
+    assert config.provider.adapter_module == BravoCredit.Banking.Providers.ES
+    assert config.review == %{"high_amount_threshold" => "30000.00"}
   end
 end

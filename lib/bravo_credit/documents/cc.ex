@@ -5,6 +5,7 @@ defmodule BravoCredit.Documents.CC do
 
   @behaviour BravoCredit.Documents.Validator
 
+  alias BravoCredit.Error
   alias BravoCredit.Errors
 
   @cc_regex ~r/^\d{6,10}$/
@@ -16,7 +17,11 @@ defmodule BravoCredit.Documents.CC do
     if Regex.match?(@cc_regex, normalized_document_id) do
       :ok
     else
-      {:error, Errors.invalid_document_format("document_id")}
+      {:error, Errors.invalid_document_format("document_id") |> put_reason("invalid_format_co")}
     end
+  end
+
+  defp put_reason(%Error{} = error, reason) do
+    %{error | details: Map.put(error.details, :reason, reason)}
   end
 end

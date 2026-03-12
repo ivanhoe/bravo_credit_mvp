@@ -6,6 +6,7 @@ defmodule BravoCreditWeb.HealthController do
   use BravoCreditWeb, :controller
 
   alias BravoCredit.Repo
+  alias Ecto.Adapters.SQL
 
   def show(conn, _params) do
     json(conn, %{status: "ok"})
@@ -28,7 +29,7 @@ defmodule BravoCreditWeb.HealthController do
   end
 
   defp database_status do
-    case Ecto.Adapters.SQL.query(Repo, "SELECT 1", []) do
+    case SQL.query(Repo, "SELECT 1", []) do
       {:ok, _result} -> "ok"
       {:error, _error} -> "error"
     end
