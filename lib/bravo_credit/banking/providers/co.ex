@@ -13,7 +13,7 @@ defmodule BravoCredit.Banking.Providers.CO do
      %{
        provider_reference: "co-#{suffix}",
        total_debt: Decimal.new("320000.00"),
-       average_bank_balance: Decimal.new("2100000.00")
+       credit_history: "clean"
      }}
   end
 end

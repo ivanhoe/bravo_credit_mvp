@@ -19,7 +19,14 @@ defmodule BravoCredit.Applications.Application do
     :in_review,
     :cancelled
   ]
-  @risk_statuses [:not_started, :processing, :approved, :rejected, :manual_review]
+  @risk_statuses [
+    :not_started,
+    :provider_data_ready,
+    :processing,
+    :approved,
+    :rejected,
+    :manual_review
+  ]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -53,7 +60,13 @@ defmodule BravoCredit.Applications.Application do
           | :in_review
           | :cancelled
 
-  @type risk_status :: :not_started | :processing | :approved | :rejected | :manual_review
+  @type risk_status ::
+          :not_started
+          | :provider_data_ready
+          | :processing
+          | :approved
+          | :rejected
+          | :manual_review
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,

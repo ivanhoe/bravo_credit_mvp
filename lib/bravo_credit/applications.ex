@@ -3,7 +3,9 @@ defmodule BravoCredit.Applications do
   Public application services for managing credit applications.
   """
 
+  alias BravoCredit.Applications.Application
   alias BravoCredit.Pipelines.CreateApplication
+  alias BravoCredit.Repo
 
   @spec create(map(), term()) ::
           {:ok, BravoCredit.Applications.Application.t()} | {:error, BravoCredit.Error.t()}
@@ -13,4 +15,7 @@ defmodule BravoCredit.Applications do
       {:error, error} -> {:error, error}
     end
   end
+
+  @spec get(Ecto.UUID.t()) :: Application.t() | nil
+  def get(application_id), do: Repo.get(Application, application_id)
 end

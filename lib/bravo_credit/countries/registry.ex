@@ -7,11 +7,11 @@ defmodule BravoCredit.Countries.Registry do
   alias BravoCredit.Errors
 
   @registry_key {__MODULE__, :configs}
-  @validator_registry %{
+  @default_validator_registry %{
     "curp" => BravoCredit.Documents.CURP,
     "cc_basic" => BravoCredit.Documents.CC
   }
-  @provider_registry %{
+  @default_provider_registry %{
     "bank_mx" => BravoCredit.Banking.Providers.MX,
     "bank_co" => BravoCredit.Banking.Providers.CO
   }
@@ -51,10 +51,25 @@ defmodule BravoCredit.Countries.Registry do
   end
 
   @spec validator_registry() :: %{String.t() => module()}
-  def validator_registry, do: @validator_registry
+  def validator_registry do
+    Application.get_env(:bravo_credit, :country_validator_registry, @default_validator_registry)
+  end
 
   @spec provider_registry() :: %{String.t() => module()}
-  def provider_registry, do: @provider_registry
+  def provider_registry do
+    Application.get_env(:bravo_credit, :country_provider_registry, @default_provider_registry)
+  end
+
+  @spec provider_module(String.t()) :: {:ok, module()} | {:error, BravoCredit.Error.t()}
+  def provider_module(adapter) when is_binary(adapter) do
+    case Map.fetch(provider_registry(), adapter) do
+      {:ok, module} ->
+        {:ok, module}
+
+      :error ->
+        {:error, Errors.internal_error("Provider adapter is not registered", %{adapter: adapter})}
+    end
+  end
 
   @spec path() :: String.t()
   def path, do: Application.fetch_env!(:bravo_credit, :country_config_path)
