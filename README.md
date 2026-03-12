@@ -37,6 +37,33 @@ Core capabilities currently implemented:
 - Req
 - YAML Elixir
 
+## Assumptions
+
+- The challenge is implemented as a production-sane MVP, not a fully productized lending platform.
+- `MX` and `CO` are implemented end to end as the proof of the multi-country architecture.
+- External banking providers are simulated behind country adapters and webhooks.
+- The operations console is meant for reviewers and internal operators; the authenticated JSON API is the primary integration surface.
+- `GET /api/applications/:id` returns a safe detail payload: it includes the aggregate snapshot needed for operations, but masks document identifiers and redacts sensitive banking fields.
+
+## Data Model
+
+Main persisted entities:
+- `applications`: main aggregate snapshot with encrypted PII, current state, risk fields, and provider-derived metadata.
+- `application_events`: append-only audit history for business changes.
+- `event_outbox`: asynchronous side effects created by a PostgreSQL trigger on `application_events`.
+- `webhook_events`: idempotent record of incoming external callbacks.
+- `oban_jobs`: persisted asynchronous work queues managed by Oban.
+
+The source of truth is PostgreSQL. LiveView dashboards re-query persisted state after lightweight PubSub notifications.
+
+## Security Notes
+
+- API authentication uses JWT via Guardian.
+- Authorized API reads and manual transitions are scoped by `country_access`.
+- Sensitive fields (`full_name`, `document_id`) are encrypted at rest with Cloak.
+- Queries avoid searching by raw PII and rely on hashes for deduplication.
+- The challenge UI is intentionally simple; for a production rollout, the `/operations` console should be protected with the same authentication model as the API.
+
 ## Caching Strategy
 
 The application uses native Elixir **ETS (Erlang Term Storage)** for high-performance caching.
@@ -86,6 +113,7 @@ mix phx.server
 
 The API and UI will be available at `http://localhost:4000`.
 The health endpoint is `http://localhost:4000/health`.
+The readiness endpoint is `http://localhost:4000/health/ready`.
 
 If you prefer `just`, its recipes load `.env` automatically once the file exists, so `just setup` and `just server` work without re-exporting variables manually.
 
@@ -188,6 +216,23 @@ The PostgreSQL-native async requirement is implemented separately:
 3. `DispatchOutbox` drains pending rows
 4. non-critical side effects are executed from the outbox
 
+## Country State Policies
+
+State transitions are now defined per country in `config/countries/*.yaml` and resolved through `BravoCredit.Applications.StatePolicy`.
+
+Examples:
+- `MX`: allows `approved -> cancelled`
+- `CO`: keeps a stricter terminal policy, so `approved` is final and `in_review` can only move to `approved` or `rejected`
+
+This keeps the lifecycle extensible without hardcoding business flow in controllers or workers.
+
+## Observability and Runtime Checks
+
+- `GET /health`: shallow container/process health used for liveness.
+- `GET /health/ready`: verifies database connectivity plus critical runtime processes (`Cache`, `PubSub`) and is intended for readiness probes.
+- `application_events`, `webhook_events`, and `event_outbox` provide an auditable trail for the operations console.
+- LiveView screens subscribe to small PubSub notifications and then re-read PostgreSQL instead of treating websockets as the source of truth.
+
 ## Docker Workflow
 
 The default Compose flow runs only PostgreSQL for local development:
@@ -274,10 +319,14 @@ As requested by the challenge, here is the analysis on how the application handl
 ## Kubernetes Deployment (k8s)
 
 Kubernetes manifests are included in the `k8s/` directory to deploy the main components of this solution:
-- `k8s/deployment.yaml`: Defines the Pod replicas for the Elixir application.
+- `k8s/deployment.yaml`: Phoenix/API deployment with `/health/ready` readiness and `/health` liveness.
+- `k8s/worker-deployment.yaml`: Dedicated Oban/worker deployment using the same release image with `PHX_SERVER=false`.
 - `k8s/service.yaml`: Exposes the pods internally.
 - `k8s/ingress.yaml`: Routes external HTTP traffic to the service.
-- `k8s/configmap.yaml` & `k8s/secret.yaml`: Manage environment variables and secrets (simulated for the MVP).
+- `k8s/postgres-service.yaml` and `k8s/postgres-statefulset.yaml`: Minimal PostgreSQL backing service for the MVP manifests.
+- `k8s/configmap.yaml` & `k8s/secret.yaml`: Manage environment variables and secrets (simulated for the MVP), including `DATABASE_URL`.
+
+These manifests are intentionally minimal for the challenge. In production, PostgreSQL should be managed separately, secrets should come from a secret manager, and app/worker autoscaling should be tuned independently.
 
 ## Tradeoffs
 
@@ -285,3 +334,4 @@ This repository is intentionally scoped as a production-sane MVP:
 - two countries are implemented well instead of many superficially
 - external providers are simulated behind behaviours and adapters
 - some outbound side effects are represented by the outbox infrastructure without fully fleshed external integrations
+- Kubernetes files demonstrate deployability, but they are not a full production platform blueprint

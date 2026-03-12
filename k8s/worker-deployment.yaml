@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bravocredit-worker
+  labels:
+    app: bravocredit-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bravocredit-worker
+  template:
+    metadata:
+      labels:
+        app: bravocredit-worker
+    spec:
+      containers:
+        - name: bravocredit-worker
+          image: bravocredit-app:latest
+          imagePullPolicy: IfNotPresent
+          command: ["bin/bravo_credit", "start"]
+          envFrom:
+            - configMapRef:
+                name: bravocredit-config
+            - secretRef:
+                name: bravocredit-secrets
+          env:
+            - name: PHX_SERVER
+              value: "false"

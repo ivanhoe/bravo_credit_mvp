@@ -26,9 +26,12 @@ spec:
                 name: bravocredit-config
             - secretRef:
                 name: bravocredit-secrets
+          env:
+            - name: PHX_SERVER
+              value: "true"
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/ready
               port: 4000
             initialDelaySeconds: 10
             periodSeconds: 5
