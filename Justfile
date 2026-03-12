@@ -3,6 +3,18 @@ set shell := ["zsh", "-cu"]
 default:
   @just --list
 
+db-up:
+  docker compose up -d postgres
+
+db-down:
+  docker compose down
+
+db-logs:
+  docker compose logs -f postgres
+
+db-ps:
+  docker compose ps
+
 setup:
   mix setup
 

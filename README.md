@@ -18,27 +18,51 @@ mix phx.gen.secret
 mix phx.gen.secret
 ```
 
-Use one value for `SECRET_KEY_BASE` and another for `GUARDIAN_SECRET_KEY`. `CLOAK_KEY` must be exactly 32 characters.
+Use one value for `SECRET_KEY_BASE` and another for `GUARDIAN_SECRET_KEY`. `SECRET_KEY_BASE` must be at least 64 characters and `CLOAK_KEY` must be exactly 32 characters.
+The default Docker Compose setup uses port `5433` to avoid conflicts with Postgres.app on macOS.
 
-2. Install dependencies:
+2. Start PostgreSQL with Docker Compose:
+
+```bash
+docker compose up -d postgres
+```
+
+3. Install dependencies:
 
 ```bash
 mix deps.get
 ```
 
-3. Create and migrate the database:
+4. Create and migrate the database:
 
 ```bash
 mix ecto.setup
 ```
 
-4. Start the app:
+5. Start the app:
 
 ```bash
 mix phx.server
 ```
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+## Local Database
+
+The project uses `docker-compose.yml` to run PostgreSQL locally.
+
+Common commands:
+
+```bash
+docker compose up -d postgres
+docker compose ps
+docker compose logs -f postgres
+docker compose down
+```
+
+`DATABASE_URL` and `TEST_DATABASE_URL` are expected to point to this Postgres instance.
+
+If you have `just` installed, the same shortcuts are available through the `Justfile`.
 
 ## Documentation
 
