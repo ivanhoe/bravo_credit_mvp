@@ -26,8 +26,20 @@ defmodule BravoCredit.Pipelines.CreateApplicationTest do
 
     assert Repo.aggregate(Application, :count) == 1
     assert Repo.aggregate(ApplicationEvent, :count) == 1
-    assert Repo.aggregate(OutboxEvent, :count) == 1
+    assert Repo.aggregate(OutboxEvent, :count) == 2
     assert Repo.aggregate(Job, :count) == 1
+
+    assert Repo.aggregate(
+             Ecto.Query.from(event in OutboxEvent, where: event.aggregate_type == "application"),
+             :count
+           ) == 1
+
+    assert Repo.aggregate(
+             Ecto.Query.from(event in OutboxEvent,
+               where: event.aggregate_type == "application_event"
+             ),
+             :count
+           ) == 1
 
     assert [%Job{} = job] = Repo.all(Job)
     assert job.worker == "BravoCredit.Workers.FetchProviderData"
