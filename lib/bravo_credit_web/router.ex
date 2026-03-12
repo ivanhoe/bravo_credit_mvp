@@ -19,6 +19,12 @@ defmodule BravoCreditWeb.Router do
   end
 
   scope "/", BravoCreditWeb do
+    pipe_through :api
+
+    get "/health", HealthController, :show
+  end
+
+  scope "/", BravoCreditWeb do
     pipe_through :browser
 
     get "/", PageController, :home
