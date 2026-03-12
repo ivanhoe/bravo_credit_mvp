@@ -6,6 +6,7 @@ defmodule BravoCredit.Workers.ProcessIncomingWebhook do
   use Oban.Worker, queue: :webhooks, max_attempts: 5
 
   alias BravoCredit.Error
+  alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Webhooks
   alias BravoCredit.Webhooks.WebhookEvent
 
@@ -14,6 +15,17 @@ defmodule BravoCredit.Workers.ProcessIncomingWebhook do
     request_id = Map.get(args, "request_id", Ecto.UUID.generate())
 
     case Webhooks.process(webhook_event_id, request_id) do
+      {:ok, %{application: application, webhook_event: webhook_event}}
+      when not is_nil(application) ->
+        :ok =
+          Broadcaster.broadcast_application(application, "webhook.processed", %{
+            webhook_event_id: webhook_event.id,
+            webhook_status: Atom.to_string(webhook_event.status),
+            external_event_type: webhook_event.event_type
+          })
+
+        :ok
+
       {:ok, _result} ->
         :ok
 

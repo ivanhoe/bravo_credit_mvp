@@ -4,6 +4,7 @@ defmodule BravoCredit.Webhooks do
   """
 
   alias BravoCredit.Errors
+  alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Repo
   alias BravoCredit.Webhooks.Processor
   alias BravoCredit.Webhooks.WebhookEvent
@@ -34,6 +35,7 @@ defmodule BravoCredit.Webhooks do
 
       case Repo.transaction(multi) do
         {:ok, %{webhook_event: webhook_event}} ->
+          maybe_broadcast_receive(params, webhook_event)
           {:ok, webhook_event}
 
         {:error, :webhook_event, changeset, _changes_so_far} ->
@@ -166,6 +168,20 @@ defmodule BravoCredit.Webhooks do
 
   defp maybe_put_error(errors, _field, nil), do: errors
   defp maybe_put_error(errors, field, messages), do: Map.put(errors, field, messages)
+
+  defp maybe_broadcast_receive(params, webhook_event) do
+    case normalize_string(Map.get(params, "application_id")) do
+      nil ->
+        :ok
+
+      application_id ->
+        Broadcaster.broadcast_application_id(application_id, "webhook.received", %{
+          webhook_event_id: webhook_event.id,
+          webhook_status: Atom.to_string(webhook_event.status),
+          external_event_type: webhook_event.event_type
+        })
+    end
+  end
 
   defp duplicate_constraint_error?(changeset) do
     Enum.any?(changeset.errors, fn {_field, {_message, opts}} ->

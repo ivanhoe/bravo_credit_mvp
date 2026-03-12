@@ -5,6 +5,7 @@ defmodule BravoCredit.Workers.DispatchOutbox do
 
   use Oban.Worker, queue: :outbox, max_attempts: 1
 
+  alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Outbox
   alias BravoCredit.Outbox.Registry
 
@@ -28,11 +29,16 @@ defmodule BravoCredit.Workers.DispatchOutbox do
   defp dispatch_processing_event(processing_event) do
     with {:ok, handler} <- Registry.handler_for(processing_event.aggregate_type),
          :ok <- handler.handle(processing_event),
-         {:ok, _processed_event} <- Outbox.mark_processed(processing_event) do
+         {:ok, processed_event} <- Outbox.mark_processed(processing_event) do
+      :ok = Broadcaster.broadcast_outbox_event(processed_event)
       :ok
     else
       {:error, %BravoCredit.Error{} = error} ->
-        _ = Outbox.record_failure(processing_event, error)
+        case Outbox.record_failure(processing_event, error) do
+          {:ok, failed_event} -> :ok = Broadcaster.broadcast_outbox_event(failed_event)
+          {:error, _changeset} -> :ok
+        end
+
         :ok
 
       {:error, %Ecto.Changeset{}} ->

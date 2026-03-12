@@ -6,6 +6,7 @@ defmodule BravoCredit.Applications do
   alias BravoCredit.Accounts.User
   alias BravoCredit.Applications.Application
   alias BravoCredit.Applications.Queries
+  alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Pipelines.CreateApplication
   alias BravoCredit.Pipelines.UpdateApplicationState
   alias BravoCredit.Repo
@@ -14,8 +15,12 @@ defmodule BravoCredit.Applications do
           {:ok, BravoCredit.Applications.Application.t()} | {:error, BravoCredit.Error.t()}
   def create(params, actor \\ "public_api") when is_map(params) do
     case CreateApplication.call(params, actor) do
-      {:ok, %{application: application}} -> {:ok, application}
-      {:error, error} -> {:error, error}
+      {:ok, %{application: application}} ->
+        :ok = Broadcaster.broadcast_application(application, "application.created")
+        {:ok, application}
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 
@@ -45,8 +50,12 @@ defmodule BravoCredit.Applications do
           {:ok, Application.t()} | {:error, BravoCredit.Error.t()}
   def update_state(application_id, params, %User{} = user) do
     case UpdateApplicationState.call(application_id, params, user) do
-      {:ok, %{application: application}} -> {:ok, application}
-      {:error, error} -> {:error, error}
+      {:ok, %{application: application}} ->
+        :ok = Broadcaster.broadcast_application(application, "application.state_changed")
+        {:ok, application}
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 end

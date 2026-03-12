@@ -28,6 +28,9 @@ defmodule BravoCreditWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/operations", DashboardLive, :index
+    live "/applications/new", ApplicationFormLive, :new
+    live "/applications/:id", ApplicationLive.Show, :show
   end
 
   scope "/api", BravoCreditWeb do

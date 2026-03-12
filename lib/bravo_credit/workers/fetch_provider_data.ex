@@ -6,6 +6,7 @@ defmodule BravoCredit.Workers.FetchProviderData do
   use Oban.Worker, queue: :providers, max_attempts: 5
 
   alias BravoCredit.Error
+  alias BravoCredit.Monitoring.Broadcaster
   alias BravoCredit.Pipelines.FetchProviderData, as: FetchProviderDataPipeline
 
   @impl Oban.Worker
@@ -13,7 +14,13 @@ defmodule BravoCredit.Workers.FetchProviderData do
     request_id = Map.get(args, "request_id", Ecto.UUID.generate())
 
     case FetchProviderDataPipeline.call(application_id, request_id) do
-      {:ok, _context} ->
+      {:ok, context} ->
+        :ok =
+          Broadcaster.broadcast_application(
+            context.application,
+            "application.provider_data_received"
+          )
+
         :ok
 
       {:error, %Error{retryable?: false} = error} ->
